@@ -1,0 +1,248 @@
+% --- INICIO DEL ÍNDICE ---
+\textit{Nota:} Se adjunta un índice para buscar más fácil el contenido.
+\section*{\centering \textsc{I. Matemáticas y Demostraciones Vectoriales}}
+\vspace{0.2cm}
+\textit{Fundamentos teóricos sobre operaciones con vectores, matrices y transformaciones.}
+\vspace{0.3cm}
+\hrule
+\vspace{0.5cm}
+
+\begin{itemize}
+    \setlength{\itemsep}{12pt} % Espacio extra entre ejercicios
+
+    \item \textbf{1.2.1} \textbf{Producto Escalar (Dot Product)} \\
+    Demostración del cálculo mediante suma de componentes en base ortonormal.
+
+    \item \textbf{1.2.2} \textbf{Producto Vectorial (Cross Product)} \\
+    Demostración del cálculo utilizando coordenadas cartesianas.
+
+    \item \textbf{1.2.3} \textbf{Ortogonalidad} \\
+    Demostración de que el producto vectorial es perpendicular a los vectores originales.
+
+    \item \textbf{1.2.4} \textbf{Invariancia Rotacional 2D} \\
+    Prueba de que el producto escalar se mantiene constante tras aplicar una rotación.
+
+    \item \textbf{1.2.5} \textbf{Isometría (Conservación de Norma)} \\
+    Demostración de que la rotación no altera la longitud del vector.
+
+    \item \textbf{1.2.6} \textbf{Rotación de 90 Grados} \\
+    Demostración de perpendicularidad: $\vec{v} \cdot R(\vec{v}) = 0$.
+
+    \item \textbf{1.2.7} \textbf{Matrices Ortonormales} \\
+    Análisis de la matriz de rotación 2D: filas y columnas unitarias y ortogonales.
+
+    \item \textbf{1.2.8} \textbf{No Conmutatividad (Escalado)} \\
+    Prueba de que $R \cdot S \neq S \cdot R$ si el escalado no es uniforme.
+
+    \item \textbf{1.2.9} \textbf{No Conmutatividad (Traslación)} \\
+    Prueba de que el orden importa entre rotación y traslación.
+
+    \item \textbf{1.2.10} \textbf{Invariancia en 3D} \\
+    El producto escalar es invariante bajo rotaciones en ejes cartesianos.
+
+    \item \textbf{1.2.11} \textbf{Rotación del Producto Cruz} \\
+    Demostración de la propiedad distributiva de la rotación sobre el producto vectorial.
+\end{itemize}
+
+\vspace{1cm}
+
+\section*{\centering \textsc{II. Implementación en GDScript (Godot)}}
+\vspace{0.2cm}
+\textit{Scripts para generación de geometría, jerarquías de escena y lógica de control.}
+\vspace{0.3cm}
+\hrule
+\vspace{0.5cm}
+
+\subsection*{\textit{A. Geometría Procedural y Mallas}}
+\begin{itemize}
+    \setlength{\itemsep}{10pt}
+    
+    \item \textbf{1.1.1} \textbf{Polígono Regular Relleno} \\
+    Creación de una malla de $N$ lados mediante \texttt{MeshInstance2D}.
+    
+    \item \textbf{1.1.2} \textbf{Gradientes de Color} \\
+    Uso de \textit{Vertex Colors} para interpolación de colores en la malla.
+    
+    \item \textbf{1.1.4} \textbf{Visualización de Aristas (Wireframe)} \\
+    Diferencias de implementación entre mallas indexadas y no indexadas.
+    
+    \item \textbf{1.1.5} \textbf{Debug de Normales} \\
+    Script global (autoload) para generar líneas que visualicen las normales de una malla.
+    
+    \item \textbf{1.2.12} \textbf{Función Gancho} \\
+    Generación de una polilínea simple mediante código.
+    
+    \item \textbf{1.4.1} \textbf{Figuras Compuestas} \\
+    Script para generar un cuadrado azul con un triángulo inscrito y bordes diferenciados.
+    
+    \item \textbf{1.4.3} \textbf{Triangulación Manual (Tronco)} \\
+    Generación de un polígono cóncavo mediante descomposición en triángulos.
+    
+    \item \textbf{1.4.5} \textbf{Modelado por Código (Logo Android)} \\
+    Construcción 3D usando primitivas cilíndricas y semiesféricas.
+\end{itemize}
+
+\subsection*{\textit{B. Escena, Jerarquías y Animación}}
+\begin{itemize}
+    \setlength{\itemsep}{10pt}
+
+    \item \textbf{1.2.13} \textbf{Instanciación y Pivotes} \\
+    Rotaciones complejas alrededor de un punto de pivote desplazado.
+    
+    \item \textbf{1.4.2} \textbf{Transformaciones Jerárquicas} \\
+    Uso de nodos padre/hijo con escalado negativo (efecto espejo).
+    
+    \item \textbf{1.4.4} \textbf{Árbol Fractal Recursivo} \\
+    Script recursivo para generar ramas transformadas geométricamente.
+    
+    \item \textbf{1.8.1} \textbf{Gestión de Input} \\
+    Lógica para detectar la duración exacta de la pulsación de una tecla.
+    
+    \item \textbf{1.10.1} \textbf{Curvas de Hermite} \\
+    Interpolación suave de movimiento pasando por puntos de control con tangentes.
+    
+    \item \textbf{1.10.2} \textbf{Oscilación Controlada} \\
+    Movimiento periódico con velocidad constante y rebote exacto en extremos.
+    
+    \item \textbf{1.10.3} \textbf{Reloj Analógico} \\
+    Rotación de agujas sincronizada con el tiempo del sistema (\texttt{Time}).
+    
+    \item \textbf{1.10.4} \textbf{Simulación de Péndulo} \\
+    Animación basada en funciones armónicas ($sin/cos$) para oscilación física.
+    
+    \item \textbf{1.10.5} \textbf{Tiro Parabólico} \\
+    Animación física basada en la ecuación $p = p_0 + v_0t + 0.5at^2$.
+\end{itemize}
+
+\vspace{1cm}
+
+\section*{\centering \textsc{III. Algoritmos y Pseudocódigo (Ray Tracing)}}
+\vspace{0.2cm}
+\textit{Diseño lógico para cálculo de intersecciones y selección (Picking).}
+\vspace{0.3cm}
+\hrule
+\vspace{0.5cm}
+
+\begin{itemize}
+    \setlength{\itemsep}{12pt}
+
+    \item \textbf{1.8.2} \textbf{Intersección Rayo-Triángulo} \\
+    Algoritmo completo: Intersección con plano + Coordenadas Baricéntricas.
+    
+    \item \textbf{1.8.3} \textbf{Picking (Unproject)} \\
+    Cálculo del rayo 3D en coordenadas de mundo a partir de un click en pantalla 2D.
+    
+    \item \textbf{1.9.1} \textbf{Intersección Rayo-Disco} \\
+    Lógica de intersección plano-rayo y verificación de distancia al centro (radio).
+    
+    \item \textbf{1.9.2} \textbf{Intersección Rayo-Esfera} \\
+    Resolución mediante ecuación cuadrática para esferas unitarias y genéricas.
+    
+    \item \textbf{1.9.3} \textbf{Intersección Rayo-Cilindro/Cono} \\
+    Algoritmos para cuádricas infinitas con \textit{clipping} por altura finita.
+    
+    \item \textbf{1.3.5} \textbf{Extracción de Aristas} \\
+    Algoritmo para generar una tabla de aristas únicas desde una lista de triángulos.
+    
+    \item \textbf{1.3.6} \textbf{Cálculo de Área} \\
+    Algoritmo para sumar las áreas de los triángulos de una malla (producto cruz).
+\end{itemize}
+
+\vspace{1cm}
+
+\section*{\centering \textsc{IV. Teoría de Mallas y Texturas}}
+\vspace{0.2cm}
+\textit{Eficiencia espacial, topología y mapeo de coordenadas UV.}
+\vspace{0.3cm}
+\hrule
+\vspace{0.5cm}
+
+\begin{itemize}
+    \setlength{\itemsep}{12pt}
+
+    \item \textbf{1.3.1} \textbf{Eficiencia de Memoria} \\
+    Comparativa: Enumeración Espacial (Vóxeles $O(k^3)$) vs Malla Indexada ($O(k^2)$).
+    
+    \item \textbf{1.3.2} \textbf{Rejilla Rectangular} \\
+    Cálculo de memoria requerida para una topología de rejilla $M \times N$.
+    
+    \item \textbf{1.3.3} \textbf{Triangle Strips} \\
+    Análisis coste-beneficio: Ahorro de memoria vs coste de Vertex Shader.
+    
+    \item \textbf{1.3.4} \textbf{Topología (Euler-Poincaré)} \\
+    Demostración de relaciones en mallas cerradas: $N_A = 3(N_V-2)$.
+    
+    \item \textbf{1.7.1} \textbf{Mapeo UV (Dado)} \\
+    Diseño de tabla de vértices mínima (14 vértices) para textura continua.
+    
+    \item \textbf{1.7.2} \textbf{Normales y Costuras (Hard Edges)} \\
+    Justificación de duplicado de vértices (24) para iluminación en cubo.
+    
+    \item \textbf{1.7.3} \textbf{Textura Repetida (Tiling)} \\
+    Tabla de coordenadas UV para repetir una imagen en todas las caras.
+\end{itemize}
+
+\vspace{1cm}
+
+\section*{\centering \textsc{V. Cámara, Proyección e Iluminación}}
+\vspace{0.2cm}
+\textit{Matemáticas de la cámara virtual y modelos de reflexión de luz.}
+\vspace{0.3cm}
+\hrule
+\vspace{0.5cm}
+
+\subsection*{\textit{A. Configuración de Cámara}}
+\begin{itemize}
+    \setlength{\itemsep}{10pt}
+
+    \item \textbf{1.5.1} \textbf{Cámara de Seguimiento} \\
+    Script para posicionar la cámara detrás y arriba de un objetivo móvil.
+    
+    \item \textbf{1.5.2} \textbf{LookAt (Ejes Alineados)} \\
+    Cálculo de vectores $a, u, n$ para una configuración ortogonal específica.
+    
+    \item \textbf{1.5.3} \textbf{LookAt (Con Rotación)} \\
+    Cálculo de vectores de cámara incluyendo rotación sobre el eje de vista (\textit{Roll}).
+    
+    \item \textbf{1.5.4} \textbf{Base de la Cámara} \\
+    Código para derivar la base ortonormal ($u, v, n$) desde parámetros de vista.
+    
+    \item \textbf{1.5.5} \textbf{Matriz de Vista} \\
+    Construcción manual de la \texttt{Transform3D} (inversa de la cámara).
+    
+    \item \textbf{1.5.6} \textbf{Control de Aspect Ratio} \\
+    Script para mantener el FOV fijo (75º) independientemente del tamaño de ventana.
+\end{itemize}
+
+\subsection*{\textit{B. Proyección y Frustum}}
+\begin{itemize}
+    \setlength{\itemsep}{10pt}
+
+    \item \textbf{1.5.7} \textbf{Frustum Ajustado (Cubo)} \\
+    Cálculo de planos ($n, f, l, r, t, b$) para encuadrar perfectamente un cubo.
+    
+    \item \textbf{1.5.8} \textbf{Frustum Ajustado (Esfera)} \\
+    Ajuste de planos de proyección para encuadrar una esfera tangente.
+    
+    \item \textbf{1.5.9} \textbf{Frustum No Cuadrado} \\
+    Adaptación de la proyección para relaciones de aspecto \textit{Landscape} y \textit{Portrait}.
+    
+    \item \textbf{1.5.10} \textbf{Posicionamiento por FOV} \\
+    Cálculo de la distancia de la cámara dado un ángulo de apertura $\beta$.
+\end{itemize}
+
+\subsection*{\textit{C. Modelos de Iluminación}}
+\begin{itemize}
+    \setlength{\itemsep}{10pt}
+
+    \item \textbf{1.6.1} \textbf{Especularidad} \\
+    Implementación de las fórmulas de Phong y Blinn-Phong en GDScript.
+    
+    \item \textbf{1.6.2} \textbf{Puntos de Brillo Máximo} \\
+    Cálculo teórico de la posición del brillo en una esfera (Lambert/Phong).
+    
+    \item \textbf{1.6.3} \textbf{BRDF GGX (Microfacetas)} \\
+    Implementación completa: Fresnel Schlick + Geometría + Distribución Normal.
+\end{itemize}
+
+% --- FIN DEL ÍNDICE ---

@@ -1,0 +1,183 @@
+\chapter{Resolución práctica 3}
+\section{Introducción a la Práctica de Grafos de Escena}
+
+\subsection{Objetivos de la Práctica 3}
+
+La Práctica 3, titulada "Grafos de escena", tiene como propósito fundamental la aplicación de los conceptos de modelado jerárquico en el entorno de Godot Engine.
+
+Los objetivos específicos que deben ser cubiertos por los estudiantes son:
+\begin{enumerate}
+    \item Aprender a diseñar e implementar \textbf{modelos jerárquicos de objetos articulados}.
+    \item Aprender a \textbf{crear el grafo de escena} que formaliza la jerarquía.
+    \item Comprender el funcionamiento de la \textbf{pila de transformaciones} (o composición de transformaciones).
+    \item Aprender a \textbf{modificar interactivamente parámetros} del modelo.
+    \item Aprender a \textbf{implementar animaciones sencillas}.
+\end{enumerate}
+
+\subsection{Marco Teórico: Modelos Jerárquicos y Transformaciones}
+
+\subsubsection{Concepto de Grafo de Escena}
+
+En Godot y en los motores gráficos en general, el \textbf{grafo de escena} (o jerarquía) es una estructura de datos, generalmente un árbol o un grafo dirigido acíclico, que modela las \textbf{relaciones jerárquicas} entre los objetos que componen la aplicación, tales como cámaras, luces y objetos geométricos.
+
+\begin{definicion}[Modelado Jerárquico]
+Un objeto articulado o compuesto se modela mediante un nodo no terminal en el grafo, que contiene instancias de otros nodos (hijos). Los objetos simples (mallas) actúan como nodos terminales.
+\end{definicion}
+
+El desarrollo de aplicaciones en Godot se organiza en torno a \textbf{proyectos, escenas y nodos}. Una escena es una estructura jerárquica de nodos (un árbol de escena) que representan los elementos de la aplicación.
+
+\subsubsection{Transformaciones y Composiciones}
+
+Cada nodo en Godot (\codeinline{Node2D} o \codeinline{Node3D}) tiene asociado un \textbf{marco afín} local, $\mathcal{N}$. Este marco $\mathcal{N}$ se define en relación con el marco de su nodo padre, $\mathcal{P}$, mediante una matriz de transformación $M_N$, llamada \textbf{transformación del nodo}. La relación se expresa como $\mathcal{P} M_N = \mathcal{N}$.
+
+\underline{La Pila de Transformaciones}
+
+Las coordenadas de los vértices de una malla se consideran expresadas en el marco $\mathcal{N}$ del nodo (coordenadas locales). Al visualizar un objeto, la transformación final que se aplica es la composición de las transformaciones de todos los nodos en el camino desde la raíz hasta el nodo terminal.
+
+Para un nodo $N$, la matriz de transformación $M_N$ es la composición de varias transformaciones, y el orden es crucial. En el contexto de Godot 3D (\codeinline{Node3D}), la transformación se compone generalmente (de derecha a izquierda) como una secuencia de \textbf{Escalado, Rotación y Traslación}.
+
+\begin{proposicion}[Transformación de Nodo 3D]
+La transformación de un nodo $N$ se construye mediante la composición de transformaciones geométricas afines:
+$$M_N = T \circ R \circ S$$
+Donde $T$ es la Traslación (definida por \codeinline{position}), $R$ es la Rotación (definida por \codeinline{rotation} o cuaternión), y $S$ es el Escalado (definido por \codeinline{scale}).
+\end{proposicion}
+
+Es importante notar la distinción entre composición por la izquierda (actúa en el marco del padre, $M_{nuevo} = T_{padre} \cdot M_{viejo}$) y composición por la derecha (actúa en el marco local del objeto, $M_{nuevo} = M_{viejo} \cdot T_{local}$). Los métodos como \codeinline{rotate\_object\_local} componen por la derecha, interpretando los vectores de entrada en el marco local del nodo.
+
+\subsection{Requisitos Previos y Configuración del Proyecto}
+
+\subsubsection{Requisitos y Estructura Base}
+
+Para comenzar la Práctica 3, es indispensable haber \textbf{completado la Práctica 2}.
+
+El proyecto debe mantener la estructura base establecida en las prácticas anteriores, incluyendo:
+\begin{itemize}
+    \item Un nodo raíz de la escena principal.
+    \item Un nodo para la \textbf{cámara orbital} (\codeinline{Camara3DOrbital}, con el script \codeinline{camara\_3d\_orbital\_simple.gd}).
+    \item Un nodo para una \textbf{fuente de luz} (como \codeinline{DirectionalLight3D}).
+    \item Un nodo para el objeto que contiene los \textbf{ejes visibles} (\codeinline{Ejes3D}).
+    \item Un nodo padre de todos los objetos articulados, sugerido como \codeinline{ObjetosP3} o \codeinline{GrafoP3}.
+\end{itemize}
+
+\subsubsection{Organización del Proyecto}
+
+Se recomienda encarecidamente una organización de archivos clara para facilitar la gestión de recursos:
+\begin{itemize}
+    \item Utilizar una carpeta \codeinline{modelos\_3D} para los modelos externos (\codeinline{glb}, \codeinline{obj}).
+    \item Utilizar una carpeta \codeinline{scripts}. Dentro de esta, separe los scripts:
+    \begin{itemize}
+        \item \codeinline{scripts/nodos}: para scripts asociados a nodos específicos del grafo.
+        \item \codeinline{scripts/globales}: para scripts globales (autoloads), como \codeinline{utilidades.gd}.
+    \end{itemize}
+\end{itemize}
+Debe recordarse que los nodos y recursos deben tener \textbf{nombres descriptivos} (ej., \codeinline{PelotaTenis} en lugar de \codeinline{MeshInstance5}).
+
+\section{Desarrollo Detallado de las Actividades}
+
+\subsection{Actividad 1: Diseño del Grafo de Escena}
+
+El primer paso es el \textbf{diseño formal} del modelo jerárquico.
+
+\subsubsection{Definición del Modelo Articulado}
+
+El modelo debe ser un objeto articulado con \textbf{al menos tres articulaciones} (grados de libertad), que se controlarán mediante giros y desplazamientos. Al menos dos de estas articulaciones deben ser \textbf{dependientes} entre sí.
+
+\begin{ejercicio}[Diseño del Grafo de Escena Articulado]
+Diseñe un objeto jerárquico. Un ejemplo sugerido es una grúa que posea tres grados de libertad (DOF):
+\begin{enumerate}
+    \item Ángulo de giro del brazo principal (rotación en Y).
+    \item Desplazamiento del gancho a lo largo del brazo.
+    \item Altura del gancho (desplazamiento vertical o extensión de un segmento).
+\end{enumerate}
+Este diseño se debe plasmar en un documento PDF que detalle el grafo, las transformaciones involucradas, los parámetros (grados de libertad), y las referencias a los objetos terminales (mallas). Los nodos terminales pueden provenir de:
+\begin{itemize}
+    \item Objetos predefinidos de Godot (\codeinline{CubeMesh}).
+    \item Objetos creados en Práctica 1 (ej., la pirámide).
+    \item Modelos importados (\codeinline{glb}, \codeinline{obj}) de Práctica 2.
+    \item Objetos de revolución generados proceduralmente (Práctica 2).
+\end{itemize}
+
+\end{ejercicio}
+
+\subsection{Actividad 2: Creación del Modelo en Godot}
+
+Una vez diseñado el grafo, se procede a su implementación en Godot. Esto implica la creación de nodos (\codeinline{Node3D}) para la estructura jerárquica y nodos \codeinline{MeshInstance3D} para los elementos geométricos.
+
+\subsubsection{Implementación de la Jerarquía}
+
+La estructura jerárquica debe reflejar la dependencia de las transformaciones. Por ejemplo, si el *Brazo* rota, todos sus hijos (como el *Gancho*) deben rotar con él.
+
+\begin{proposicion}[Reutilización de Mallas]
+Para optimizar la memoria y el rendimiento, es crucial no duplicar mallas complejas. Los nodos \codeinline{MeshInstance3D} deben contener únicamente una referencia a la malla (\codeinline{mesh}), permitiendo que múltiples instancias compartan el mismo objeto \codeinline{ArrayMesh} o \codeinline{CubeMesh}.
+\end{proposicion}
+
+La implementación se puede realizar en el editor o mediante scripts en la función \codeinline{_ready()} del nodo raíz (\codeinline{EscenaPrincipal} o \codeinline{ObjetosP3}), creando los nodos descendientes programáticamente.
+
+\subsection{Actividad 3: Generación de una Animación del Modelo}
+
+La animación se logra \textbf{modificando los atributos de transformación} de los nodos que controlan los grados de libertad en cada *frame* de ejecución.
+
+\subsubsection{Implementación de la Animación en GDScript}
+
+La lógica de actualización continua debe residir en el método \codeinline{\_process(delta)} del script asociado al nodo que se desea animar. El parámetro \codeinline{delta} representa el tiempo transcurrido (en segundos) desde el último frame.
+
+Para una \textbf{rotación continua} (como la del brazo de la grúa alrededor del eje Y) se puede implementar de la siguiente forma:
+\begin{lstlisting}[language=GDScript, caption={Ejemplo de Animación de Rotación 3D (Brazo)}]
+extends Node3D
+
+@export var rotation_speed_deg := 10.0 # grados por segundo
+
+func _process(delta):
+    # Rotación continua en Y
+    rotation.y += deg_to_rad(rotation_speed_deg * delta)
+\end{lstlisting}
+
+Para implementar animaciones sencillas, se pueden utilizar variaciones \textbf{lineales} o \textbf{oscilantes}. Un movimiento oscilante (útil para el desplazamiento del gancho o la altura) se puede lograr utilizando la función trigonométrica seno ($\sin$):
+
+$$v = a + (b - a) \cdot \frac{1 + \sin(2\pi \cdot w \cdot t)}{2}$$
+
+Donde $a$ y $b$ son los valores mínimo y máximo, $w$ es la frecuencia de oscilación, y $t$ es el tiempo acumulado. La actualización del estado debe hacerse en \codeinline{_process(delta)}.
+
+\subsection{Actividad 4: Activación y Desactivación de la Animación}
+
+Para permitir la interacción, se debe implementar la capacidad de activar o desactivar la animación de cada articulación mediante la entrada del usuario.
+
+\subsubsection{Gestión de Eventos y Acciones de Entrada}
+
+Se recomienda usar el sistema \codeinline{Input Map} de Godot para definir acciones, como \codeinline{activar\_cabeza} o \codeinline{activar\_brazo}, y asociarlas a teclas, como las numéricas 1 a 9.
+
+Dentro del método \codeinline{\_process(delta)}, se verifica si se ha pulsado la acción de entrada deseada mediante \codeinline{Input.is\_action\_just\_pressed(accion)}:
+
+\begin{lstlisting}[language=GDScript, caption={Ejemplo de Activación/Desactivación de Animación}]
+extends Node3D
+
+@export var activar := "activar\_brazo" \# Acción definida en Input Map
+@export var rotation\_speed\_deg := 10.0
+var activa := true 
+
+func \_process(delta):
+    \# 1. Manejo de la entrada para alternar el estado
+    if Input.is\_action\_just\_pressed(activar):
+            activa = !activa
+    
+    \# 2. Aplicar la transformación solo si está activa
+    if activa:
+            rotation.y += deg\_to\_rad(rotation\_speed\_deg * delta)
+\end{lstlisting}
+
+Este mecanismo de control basado en el estado (la variable \codeinline{activa}) permite la \textbf{modificación interactiva de parámetros} del modelo, cumpliendo con uno de los objetivos clave de la práctica.
+
+\section{Entrega de la Práctica}
+
+La entrega final debe consistir en dos elementos:
+
+\begin{enumerate}
+    \item La \textbf{carpeta del proyecto Godot} completa, comprimida en formato ZIP. El proyecto debe estar organizado según las recomendaciones de la Práctica 2 (incluyendo subcarpetas para scripts y modelos).
+    \item Un \textbf{documento breve} (adicional a esta guía) que contenga:
+    \begin{itemize}
+        \item El \textbf{grafo de escena} diseñado en la Actividad 1.
+        \item Una explicación de los \textbf{scripts de interacción} implementados para controlar los grados de libertad y la animación.
+    \end{itemize}
+\end{enumerate}
+
+El diseño del grafo de escena debe ser claro, conciso y profesional, explicando cómo se han implementado las dependencias jerárquicas y cómo las transformaciones (traslación, rotación, escalado) se componen para lograr el movimiento articulado deseado.

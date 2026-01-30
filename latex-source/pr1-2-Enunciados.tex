@@ -1,0 +1,188 @@
+\chapter{Práctica 1. Escena básica y modos de visualización}
+
+\section{Objetivos}
+El propósito fundamental de esta práctica es iniciar al estudiante en el entorno de desarrollo integrado (IDE) que ofrece el motor de juegos Godot. Se busca una familiarización con su sistema de nodos y los principios elementales para la construcción de escenas tridimensionales simples. Al concluir esta sesión, el alumno deberá ser competente en la creación de una escena 3D que contenga geometría básica, aplicar materiales para definir el aspecto visual de los objetos, e implementar mecanismos de interacción básicos para el control de la cámara y los modos de visualización mediante entradas de teclado y ratón.
+
+\section{Requisitos previos}
+Para la correcta ejecución de esta práctica, es imperativo disponer de una instalación funcional de Godot Engine en su versión 4.0 o superior. Aunque no se requiere experiencia previa en el ámbito de los gráficos por computador, es fundamental poseer conocimientos básicos de programación orientada a objetos. Asimismo, se deberán descargar los ficheros de script proporcionados, con extensión \texttt{.gd}, que facilitarán la implementación de funcionalidades específicas como la visualización de ejes coordinados, la generación procedural de una pirámide y el control de una cámara orbital.
+
+\section{Actividades}
+\subsection{Crear un nuevo proyecto Godot}
+El primer paso consiste en la configuración de un nuevo proyecto en Godot Engine. Este proceso se inicia desde el gestor de proyectos, donde se debe seleccionar la opción "Nuevo proyecto". Es necesario asignar un nombre único al proyecto y especificar un directorio en el sistema de ficheros donde se almacenarán todos sus recursos y configuraciones. Para esta práctica, se utilizará el renderizador por defecto, \textbf{Forward+}.
+
+Una vez creado el proyecto, se abre el editor de Godot, que presenta una interfaz para el diseño de escenas, programación de scripts y gestión de recursos. Se procederá a crear una nueva escena 3D, cuyo nodo raíz será de tipo \texttt{Node3D}, renombrado a \texttt{EscenaPrincipal} para una mejor organización jerárquica. En Godot, una escena es una estructura de datos jerárquica (un árbol) compuesta por nodos que representan los distintos elementos de la aplicación.
+
+\subsection{Crear un cubo en la escena}
+La inserción de geometría básica es un procedimiento fundamental en el modelado 3D. Se añadirá un objeto tridimensional con forma de cubo.
+\begin{enumerate}
+    \item \textbf{Añadir un nodo de malla:} Como hijo del nodo raíz \texttt{EscenaPrincipal}, se debe instanciar un nodo de tipo \texttt{MeshInstance3D}. Este tipo de nodo se utiliza para visualizar una malla geométrica (\texttt{Mesh}) en una escena 3D, asignándole una transformación espacial (posición, rotación y escala).
+    \item \textbf{Asignar la geometría:} En el panel \textit{Inspector}, se debe asignar un recurso de tipo \texttt{CubeMesh} a la propiedad \textit{Mesh} del nodo. \texttt{CubeMesh} es una clase derivada de \texttt{PrimitiveMesh}, que proporciona geometrías predefinidas por el motor.
+    \item \textbf{Posicionar el objeto:} Se renombra el nodo a \texttt{Cubo} y se modifica su posición a las coordenadas (0, 0.5, 0) para elevarlo ligeramente sobre el plano base de la escena.
+\end{enumerate}
+
+\subsection{Añadir ejes de coordenadas}
+Para una mejor comprensión espacial de la escena, es útil visualizar un sistema de ejes de coordenadas. Se utilizará un script proporcionado (\texttt{ejes3D.gd}) que genera proceduralmente la geometría de los ejes.
+\begin{enumerate}
+    \item Se crea un nuevo nodo de tipo \texttt{Node3D}, renombrado a \texttt{Ejes3D}.
+    \item A este nodo se le asocia un nuevo script, cargando el fichero existente \texttt{ejes3D.gd}. Este script generará mallas que no se ven afectadas por la iluminación de la escena, sirviendo como una referencia visual constante.
+\end{enumerate}
+
+\subsection{Añadir cámara}
+La visualización de una escena 3D requiere la presencia de una \textbf{cámara virtual}. Este elemento define la posición, orientación y ángulo de visión desde los cuales se renderiza la imagen final.
+\begin{enumerate}
+    \item Se instancia un nodo \texttt{Camera3D} como hijo del nodo raíz. Este tipo de nodo define un punto de vista para el renderizado.
+    \item Se posiciona la cámara en \texttt{(1.5, 1.5, 2.0)} y se orienta para que apunte hacia el origen \texttt{(0, 0, 0)}. Esto se puede lograr mediante un script simple que, en su función \texttt{\_ready()}, establece la posición y utiliza el método \texttt{look\_at}.
+\end{enumerate}
+
+\begin{lstlisting}[language=GDScript, caption=Script para posicionamiento inicial de la cámara.]
+extends Camera3D
+
+func _ready():
+    position = Vector3(1.5, 1.5, 2.0)
+    look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
+\end{lstlisting}
+
+\subsection{Asignar materiales}
+El aspecto visual de un objeto se define mediante \textbf{materiales}. Un material describe cómo la superficie de un objeto interactúa con la luz, determinando propiedades como el color, el brillo o la textura.
+\begin{enumerate}
+    \item Con el nodo \texttt{Cubo} seleccionado, en el panel \textit{Inspector}, se crea un nuevo recurso \texttt{StandardMaterial3D} en la propiedad \textit{Surface Material Override}. \texttt{StandardMaterial3D} es una clase que implementa un modelo de materiales complejo con múltiples parámetros.
+    \item Se modifica la propiedad \textbf{Albedo} del material, asignándole un color amarillo. El albedo representa el color base de la superficie.
+\end{enumerate}
+Al ejecutar la escena, se observará el cubo amarillo, pero su color será plano y sin sombreado, ya que aún no hay fuentes de luz que interactúen con el material.
+
+\subsection{Añadir luz}
+La iluminación es un componente crucial para el realismo en la visualización 3D. Las fuentes de luz emiten fotones que, al interactuar con los materiales de los objetos, producen el sombreado y los reflejos que percibimos.
+\begin{enumerate}
+    \item Se añade un nodo de tipo \texttt{DirectionalLight3D} a la escena. Este tipo de luz simula una fuente infinitamente lejana, como el sol, donde todos los rayos de luz son paralelos.
+    \item Se posiciona y rota la luz para que ilumine las caras visibles del cubo con distinta intensidad, generando así un sombreado que revela su volumen tridimensional. Un modelo de iluminación simple como el de Lambert calcula la intensidad reflejada en función del coseno del ángulo entre la normal de la superficie y la dirección de la luz, lo que provoca que las caras no orientadas directamente hacia la luz aparezcan más oscuras.
+\end{enumerate}
+Tras añadir la luz, la ejecución mostrará el cubo con un sombreado que distingue sus diferentes caras.
+
+\subsection{Crear una pirámide (generación por código)}
+Godot permite la \textbf{generación procedural de geometría}, que consiste en crear mallas (\texttt{Mesh}) mediante código en tiempo de ejecución. Esto es útil para formas complejas o para geometrías que deben variar dinámicamente. Utilizaremos la clase \texttt{SurfaceTool} para construir la malla de una pirámide triángulo a triángulo.
+\begin{enumerate}
+    \item Se crea un nuevo nodo \texttt{Node3D} llamado \texttt{Piramide} y se le asocia el script \texttt{piramide.gd}.
+    \item El script define la función \texttt{crear\_piramide}, que utiliza un objeto \texttt{SurfaceTool} para definir la geometría.
+    \item Se inicializa el \texttt{SurfaceTool} para construir primitivas de tipo triángulo (\texttt{Mesh.PRIMITIVE\_TRIANGLES}).
+    \item Se definen los vértices de la base y el ápice. Las caras laterales y la base se construyen añadiendo los vértices de cada triángulo con \texttt{add\_vertex}.
+    \item Para cada triángulo, se calcula y asigna su vector normal con \texttt{set\_normal}. La normal es un vector unitario perpendicular al plano del triángulo, esencial para los cálculos de iluminación.
+    \item Finalmente, \texttt{st.commit()} genera y devuelve un recurso de tipo \texttt{ArrayMesh} con la geometría definida. Este recurso se asigna a un nuevo nodo \texttt{MeshInstance3D} que se añade a la escena como hijo del nodo \texttt{Piramide}.
+    \item La pirámide se posiciona sobre el cubo en (0, 1, 0).
+\end{enumerate}
+
+\begin{lstlisting}[language=GDScript, caption={Fragmento del script \texttt{piramide.gd} para la generación procedural.}]
+func crear_piramide(h: float) -> ArrayMesh:
+    var st = SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    
+    # Coordenadas de la base (cuadrado centrado en el origen, lado 1)
+    var p1 = Vector3(-0.5, 0, -0.5)
+    var p2 = Vector3( 0.5, 0, -0.5)
+    var p3 = Vector3( 0.5, 0,  0.5)
+    var p4 = Vector3(-0.5, 0,  0.5)
+    var apex = Vector3(0, h, 0)
+    
+    # Caras laterales (triangulos)
+    _add_triangulo(st, p1, p2, apex)
+    _add_triangulo(st, p2, p3, apex)
+    _add_triangulo(st, p3, p4, apex)
+    _add_triangulo(st, p4, p1, apex)
+    
+    # Base (dos triangulos)
+    _add_triangulo(st, p1, p3, p2, Vector3.DOWN)
+    _add_triangulo(st, p1, p4, p3, Vector3.DOWN)
+    
+    return st.commit()
+\end{lstlisting}
+
+\subsection{Cambiar el material (colores y texturas)}
+De forma análoga a la geometría, los materiales también pueden ser creados y modificados mediante código. Se modificará el script de la pirámide para asignarle un material de color rojo.
+\begin{enumerate}
+    \item En la función \texttt{\_ready()} del script \texttt{piramide.gd}, se instancia un nuevo \texttt{StandardMaterial3D}.
+    \item Se modifica su propiedad \texttt{albedo\_color} para asignarle un color rojizo, por ejemplo, \texttt{Color(1.0, 0.1, 0.2)}.
+    \item El material creado se asigna a la propiedad \texttt{material\_override} de la instancia de malla de la pirámide. Esto sobreescribe cualquier material que el objeto pudiera tener asignado en el editor.
+\end{enumerate}
+Este método permite un control dinámico y procedural sobre la apariencia de los objetos, abriendo la puerta a efectos visuales complejos y a la modificación de texturas en tiempo de ejecución.
+
+\subsection{Controlar una cámara orbital por teclado y ratón}
+Finalmente, se reemplazará la cámara estática por una cámara orbital interactiva. Este tipo de cámara gira alrededor de un punto de interés (el origen, en este caso), permitiendo al usuario observar la escena desde múltiples ángulos.
+\begin{enumerate}
+    \item Se elimina el nodo \texttt{Camera3D} anterior.
+    \item Se crea un nuevo nodo \texttt{Camera3D}, se renombra a \texttt{Camara3DOrbital}, y se le asocia el script \texttt{camara\_3d\_orbital\_simple.gd}.
+    \item El script gestiona los eventos de entrada del usuario (\texttt{\_input}) para actualizar los ángulos de órbita (\texttt{dxy}) y la distancia al origen (\texttt{dz}). Los eventos de teclado (flechas, +/-) y de ratón (botón derecho arrastrado, rueda) son procesados para modificar estos parámetros.
+    \item La función \texttt{\_actualiza\_transf\_vista} recalcula la transformación (\texttt{transform}) de la cámara en cada cambio. Utiliza una composición de transformaciones: una traslación a lo largo del eje Z local para establecer la distancia, seguida de rotaciones alrededor de los ejes X e Y para definir la orientación orbital.
+\end{enumerate}
+
+\chapter{Carga de modelos externos y normales}
+\section{Objetivos}
+Esta práctica profundiza en la representación de mallas poligonales y la gestión de modelos 3D en Godot. Los objetivos específicos son:
+\begin{itemize}
+    \item Comprender la estructura de las mallas triangulares.
+    \item Aprender a cargar y visualizar modelos 3D de formatos estándar como \texttt{glb} y \texttt{obj}.
+    \item Distinguir entre los diferentes modos de sombreado que ofrece Godot y entender su impacto visual y de rendimiento.
+    \item Implementar algoritmos para el cálculo de normales en vértices, un requisito indispensable para una correcta iluminación en superficies suaves.
+    \item Generar mallas complejas mediante técnicas de geometría procedural, como la revolución de un perfil 2D.
+\end{itemize}
+
+\section{Requisitos previos}
+Se requiere haber completado la Práctica 1 y tener configurado un proyecto base que incluya un nodo raíz, una fuente de luz y la cámara orbital implementada previamente. Es necesario disponer de los scripts \texttt{script\_raiz.gd}, \texttt{utilidades.gd} y \texttt{donut.gd}.
+
+\section{Actividades}
+\subsection{Añadir modo de visualización en alambre (wireframe)}
+La visualización en modo alambre, o \textit{wireframe}, es una técnica de renderizado que muestra únicamente las aristas de los polígonos que componen una malla, en lugar de sus caras rellenas. Este modo es invaluable para la depuración de algoritmos de generación de mallas y para el análisis de la topología de un modelo 3D.
+
+En Godot, este modo se puede activar a nivel de \textit{viewport}. Se implementará una funcionalidad que permita alternar entre el modo de renderizado estándar y el modo \textit{wireframe} al pulsar la tecla 'W'.
+\begin{enumerate}
+    \item Se asocia el script \texttt{script\_raiz.gd} al nodo raíz de la escena.
+    \item En la función \texttt{\_init}, se habilita la generación de mallas de alambre en el servidor de renderizado con \texttt{RenderingServer.set\_debug\_generate\_wireframes(true)}.
+    \item La función \texttt{\_unhandled\_key\_input} intercepta la pulsación de la tecla 'W'.
+    \item Al detectar el evento, se alterna el valor de una variable booleana \texttt{dibujar\_aristas}. Dependiendo de su estado, se establece la propiedad \texttt{debug\_draw} del \textit{viewport} actual a \texttt{Viewport.DEBUG\_DRAW\_WIREFRAME} o \texttt{Viewport.DEBUG\_DRAW\_DISABLED}.
+\end{enumerate}
+La Figura 16 del guion de prácticas ilustra la diferencia visual entre el renderizado normal y el modo \textit{wireframe} para un modelo de toroide (donut).
+
+\subsection{Cargar modelos 3D en formato GLB}
+Godot soporta la importación de diversos formatos de modelos 3D, entre los que se encuentra el formato \texttt{glb} (GL Transmission Format Binary). Este formato es eficiente ya que empaqueta en un único fichero binario una escena completa, incluyendo mallas, materiales, texturas y animaciones.
+El procedimiento de importación es el siguiente:
+\begin{enumerate}
+    \item \textbf{Obtención del modelo:} Se descarga un modelo en formato \texttt{glb} desde un repositorio público como Sketchfab o Poly Pizza.
+    \item \textbf{Importación al proyecto:} El fichero \texttt{.glb} se copia al directorio del proyecto. Godot lo detectará automáticamente y lo mostrará en el panel del sistema de archivos. Para una mejor organización, es recomendable crear una subcarpeta \texttt{modelos\_3D} para alojar los activos importados.
+    \item \textbf{Instanciación en la escena:} El modelo se arrastra desde el panel del sistema de archivos al árbol de la escena, como hijo de un nodo \texttt{Node3D} de organización (p.ej., \texttt{ObjetosP2}). Godot creará una nueva jerarquía de nodos que representa la estructura interna del fichero \texttt{glb}. Opcionalmente, se puede convertir esta instancia en una escena editable para modificar sus componentes de forma individual.
+\end{enumerate}
+Es posible que sea necesario ajustar la escala del nodo importado para que su tamaño sea coherente con el resto de la escena.
+
+\subsection{Cargar modelos 3D en formato OBJ}
+El formato \texttt{obj} es otro estándar de facto para modelos 3D, especialmente popular por su simplicidad (es un formato de texto). A diferencia de \texttt{glb}, un fichero \texttt{.obj} solo contiene la geometría (vértices, normales, coordenadas de textura y definición de caras). La información de materiales se suele almacenar en un fichero \texttt{.mtl} asociado, y las texturas en ficheros de imagen separados.
+
+El proceso de carga en Godot es ligeramente diferente:
+\begin{enumerate}
+    \item Se descarga el modelo, que consistirá en varios ficheros (\texttt{.obj}, \texttt{.mtl}, imágenes de textura) y se organizan en una subcarpeta dentro del proyecto.
+    \item Se crea un nodo \texttt{MeshInstance3D} vacío en la escena.
+    \item El fichero \texttt{.obj} se arrastra desde el panel del sistema de archivos y se suelta sobre la propiedad \textit{Mesh} del nodo \texttt{MeshInstance3D} en el \textit{Inspector}. Godot cargará automáticamente la geometría y tratará de asociar los materiales y texturas definidos en el fichero \texttt{.mtl}.
+\end{enumerate}
+
+\subsection{Cálculo de normales de objetos suaves y tipos de sombreado en Godot}
+Las \textbf{normales de los vértices} son vectores unitarios perpendiculares a la superficie en la posición de cada vértice, y son un atributo fundamental para los algoritmos de iluminación. Para superficies suaves (curvas), una aproximación común y efectiva es calcular la normal de un vértice como el promedio normalizado de las normales de todas las caras adyacentes a dicho vértice. Este método, conocido como el promediado de normales de caras, asume que la malla poligonal es una aproximación de una superficie subyacente continua y diferenciable.
+
+La función \texttt{calcNormales} proporcionada en el script \texttt{utilidades.gd} implementa este algoritmo: itera sobre todos los triángulos de la malla, calcula la normal de cada cara mediante el producto vectorial de dos de sus aristas, y acumula esta normal en los tres vértices que componen el triángulo. Finalmente, normaliza la normal acumulada en cada vértice.
+
+Asimismo, Godot, como la mayoría de los motores de renderizado en tiempo real, distingue entre dos principales técnicas de sombreado (\textit{shading}):
+\begin{itemize}
+    \item \textbf{Sombreado por Píxel (Pixel Shading o Fragment Shading):} El cálculo de la iluminación se realiza para cada fragmento (píxel potencial) cubierto por un triángulo. Las normales de los vértices se interpolan de forma perspectiva-correcta para cada fragmento, y esta normal interpolada se utiliza en la ecuación de iluminación. Produce resultados de alta calidad, especialmente para reflejos especulares (brillos), pero es computacionalmente más intensivo.
+    \item \textbf{Sombreado por Vértice (Vertex Shading o Gouraud Shading):} La ecuación de iluminación se calcula únicamente en cada vértice de la malla. El color resultante en cada vértice se interpola linealmente a través de la superficie del triángulo para determinar el color de cada píxel interior. Es más rápido pero puede producir artefactos visuales, como la pérdida de detalle en los reflejos especulares si la malla no es suficientemente densa.
+\end{itemize}
+En la práctica, se creará un toroide (donut) proceduralmente, se calcularán sus normales con el algoritmo mencionado y se comparará el resultado visual de ambos tipos de sombreado modificando la propiedad \texttt{shading\_mode} del material.
+
+\subsection{Normales de objetos con aristas reales (no suaves)}
+El algoritmo de promediado de normales asume una superficie suave. Para objetos con aristas duras o reales (no suaves), como un cubo, este método produce artefactos de iluminación incorrectos, ya que suaviza visualmente las aristas que deberían ser nítidas. En un cubo, cada vértice es compartido por tres caras mutuamente perpendiculares, por lo que no existe una única normal "suave" en esa posición.
+
+La solución consiste en \textbf{duplicar los vértices} en las aristas duras. Para un cubo, en lugar de un modelo con 8 vértices compartidos, se utiliza un modelo con 24 vértices. Cada esquina del cubo real corresponde a tres vértices en la misma posición geométrica en el modelo, pero cada uno de estos vértices pertenece a una sola cara (o a caras coplanares) y tiene una normal distinta, perpendicular a dicha cara. De esta manera, al no compartir vértices entre caras no coplanares, no se produce el promediado de normales a través de las aristas, preservando su dureza visual en el renderizado. Esta técnica es fundamental en el modelado de polígonos duros (\textit{hard-surface modeling}) para asegurar una iluminación precisa.
+
+\subsection{Creación de mallas por revolución de un perfil (geometría procedural)}
+La \textbf{geometría por revolución} es una técnica de modelado procedural que genera una malla 3D al rotar un perfil 2D alrededor de un eje. El perfil es una secuencia de puntos en un plano (por ejemplo, el plano XY) que define una sección transversal del objeto.
+
+El algoritmo a implementar tomará como entrada un perfil 2D (un array de \texttt{Vector2}) y el número de subdivisiones angulares (copias del perfil). Por cada punto del perfil, se generarán N vértices en un círculo alrededor del eje de revolución (eje Y). Estos vértices se conectarán para formar una malla de cuadriláteros (descompuestos en dos triángulos cada uno) que constituyen la superficie de revolución. El cálculo de las normales para esta malla generada puede abordarse de dos formas:
+\begin{enumerate}
+    \item Aplicar el algoritmo genérico de promediado de normales sobre la malla resultante.
+    \item Un método más eficiente y preciso consiste en calcular la normal para cada vértice del perfil 2D original (en su plano) y luego rotar este vector de normal junto con el propio vértice alrededor del eje de revolución para obtener las normales de todos los vértices generados.
+\end{enumerate}
+Esta técnica permite crear eficientemente objetos con simetría axial como vasos, botellas, peones de ajedrez o tornos.

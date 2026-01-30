@@ -1,0 +1,124 @@
+\chapter{Texturas, Sombreado y Materiales}
+
+\section{Introducción Teórica a las Texturas}
+
+En el ámbito de la Informática Gráfica, la representación de superficies realistas requiere ir más allá de la geometría poligonal pura. Los objetos reales presentan variaciones de color, rugosidad y reflectividad a una escala microscópica que sería computacionalmente prohibitivo modelar mediante polígonos individuales. Para resolver esto, introducimos el concepto de \textbf{textura}.
+
+Una textura se define formalmente como una función $T$ que mapea un dominio bidimensional $D$, usualmente normalizado en el intervalo $[0,1] \times [0,1]$, a un espacio de atributos del Modelo de Iluminación Local (MIL).
+\begin{equation}
+    T: D \subseteq \mathbb{R}^2 \rightarrow \mathcal{A}
+\end{equation}
+Donde $\mathcal{A}$ representa el conjunto de parámetros modificables, siendo el color difuso ($C(p)$) el más común, aunque también se aplica a coeficientes de especularidad, vectores normales y transparencia.
+
+Existen dos modalidades fundamentales para representar esta función $T$:
+\begin{itemize}
+    \item \textbf{Texturas de Imagen (Image Textures):} La función se discretiza en una matriz de elementos denominados \textit{texels} (texture elements).
+    \item \textbf{Texturas Procedurales:} La función $T(s)$ se define algorítmicamente mediante un subprograma, permitiendo resolución infinita y patrones matemáticos complejos sin consumo de memoria de almacenamiento de imagen.
+\end{itemize}
+
+\subsection{Coordenadas de Textura y Mapeo}
+
+Para aplicar una función de textura sobre una superficie tridimensional arbitraria, es imperativo establecer una correspondencia biyectiva entre los puntos de la superficie $S \subset \mathbb{R}^3$ y el dominio de la textura $D$. Sea $p = (x,y,z)$ un punto en la superficie, debe existir una función de proyección $f$:
+\begin{equation}
+    (u, v) = f(x, y, z)
+\end{equation}
+Donde el par $(u, v)$ constituye las coordenadas de textura. Esta función suele descomponerse en componentes escalares $u = f_u(p)$ y $v = f_v(p)$.
+
+\subsubsection{Estrategias de Asignación}
+La implementación de la función $f$ se realiza mediante dos estrategias principales:
+\begin{enumerate}
+    \item \textbf{Asignación Explícita:} Las coordenadas $(u, v)$ se almacenan como atributos directos de los vértices en la malla poligonal. Durante la etapa de rasterización, estas coordenadas se interpolan linealmente a través de la superficie del polígono. Esta técnica es fundamental en el modelado CAD y requiere atención especial en la continuidad de las aristas (topología de la malla) para evitar artefactos visuales o discontinuidades en el mapeo.
+    \item \textbf{Asignación Procedural:} Las coordenadas se calculan dinámicamente mediante una función matemática basada en la posición espacial del punto. Esto puede realizarse a nivel de vértice (interpolando posteriormente) o a nivel de fragmento (per-pixel) para mayor precisión en superficies no lineales.
+\end{enumerate}
+
+\subsubsection{Funciones de Proyección Procedural}
+Se definen diversas topologías de proyección para envolver objetos geométricos:
+\begin{itemize}
+    \item \textbf{Proyección Planar (Lineal):} Se proyecta el punto $p$ sobre un plano definido por un punto de anclaje $q$ y dos vectores ortonormales base $e_u, e_v$.
+    \begin{equation}
+        u = (p - q) \cdot e_u, \quad v = (p - q) \cdot e_v
+    \end{equation}
+    \item \textbf{Coordenadas Esféricas:} Se utiliza una conversión a coordenadas polares, ideal para objetos con topología esférica. Dado un punto $(x,y,z)$, los ángulos $\alpha$ (azimut) y $\beta$ (elevación) determinan $(u, v)$:
+    \begin{equation}
+        u = \frac{1}{2} + \frac{\text{atan2}(z, x)}{2\pi}, \quad v = \frac{1}{2} + \frac{\text{atan2}(y, \sqrt{x^2+z^2})}{\pi}
+    \end{equation}
+    \item \textbf{Coordenadas Cilíndricas:} Se proyecta radialmente sobre un cilindro, utilizando el ángulo para $u$ y la altura $y$ normalizada para $v$.
+\end{itemize}
+
+\subsection{Filtrado y Consulta de Texels}
+Dado que la proyección de un píxel de pantalla sobre el espacio de textura raramente coincide exactamente con un texel, se requieren algoritmos de muestreo:
+\begin{itemize}
+    \item \textbf{Vecino más cercano (Nearest Neighbor):} Selecciona el texel cuyo centroide está más próximo a $(u, v)$. Computacionalmente económico pero propenso a aliasing (pixelación).
+    \item \textbf{Interpolación Bilineal:} Calcula el promedio ponderado de los cuatro texels adyacentes a $(u, v)$, suavizando las transiciones y mejorando la calidad visual en primeros planos.
+\end{itemize}
+
+\section{Teoría del Sombreado (Shading)}
+
+El sombreado se refiere al proceso de interpolación de la iluminación sobre las superficies poligonales. En el pipeline gráfico, la evaluación del Modelo de Iluminación Local (MIL) puede ocurrir en diferentes etapas, determinando el costo computacional y la calidad visual.
+
+\subsection{Sombreado Plano (Flat Shading)}
+El MIL se evalúa una única vez por polígono, generalmente en su centroide o primer vértice. Se utiliza una única normal $n_p$ para toda la cara.
+\begin{itemize}
+    \item \textbf{Ventaja:} Alta eficiencia computacional.
+    \item \textbf{Desventaja:} Facetado visible y discontinuidades de iluminación en las aristas.
+    \item \textbf{Fenómeno Psico-visual:} Exacerba el efecto de las \textit{Bandas de Mach}, una ilusión óptica donde el contraste lateral de la retina exagera los límites entre zonas de intensidad constante.
+\end{itemize}
+
+\subsection{Sombreado de Gouraud (Vertex Shading)}
+El MIL se evalúa en cada vértice de la malla, utilizando normales promediadas de las caras adyacentes para simular curvatura. Los colores resultantes $C_{vert}$ se interpolan linealmente en el interior del polígono durante la rasterización.
+\begin{itemize}
+    \item \textbf{Limitación Crítica:} La interpolación lineal de colores pierde componentes de alta frecuencia, como los brillos especulares (highlights), si estos caen en el interior de un polígono grande y no coinciden con un vértice.
+\end{itemize}
+
+\subsection{Sombreado de Phong (Pixel Shading)}
+El MIL se evalúa para cada fragmento (píxel) generado. En lugar de interpolar colores, se interpolan los vectores normales desde los vértices.
+\begin{itemize}
+    \item \textbf{Ventaja:} Captura brillos especulares precisos y produce gradientes suaves, eliminando casi totalmente las bandas de Mach geométricas.
+    \item \textbf{Costo:} Requiere evaluar la ecuación de iluminación millones de veces por frame, aunque es el estándar actual en hardware gráfico moderno.
+\end{itemize}
+
+\section{Implementación en Motores Gráficos: Godot}
+
+El motor Godot implementa estos conceptos teóricos mediante una arquitectura de nodos y un modelo de materiales basado en física (PBR - Physically Based Rendering).
+
+\subsection{Fuentes de Iluminación}
+Las luces se modelan como nodos en el árbol de escena (\texttt{Light3D}), interactuando con las superficies mediante sus normales y propiedades materiales.
+\begin{itemize}
+    \item \textbf{DirectionalLight3D:} Simula fuentes en el infinito (como el sol). Los rayos son paralelos y la intensidad no se atenúa con la distancia. Su orientación se define por un vector local, típicamente alineado con el eje Z negativo.
+    \item \textbf{OmniLight3D:} Fuente puntual isotrópica. La atenuación sigue la ley del inverso del cuadrado de la distancia:
+    \begin{equation}
+        I(r) \propto \frac{1}{r^e}
+    \end{equation}
+    Donde $e=2$ corresponde a la realidad física, aunque se permite su modificación artística.
+    \item \textbf{SpotLight3D:} Fuente cónica restringida por un ángulo de apertura $\theta_{max}$. La intensidad decae tanto por distancia como por desviación angular respecto al eje principal del foco.
+\end{itemize}
+
+Adicionalmente, se soporta Iluminación Basada en Imágenes (IBL) mediante \texttt{WorldEnvironment} y \texttt{PanoramaSkyMaterial}, permitiendo que texturas esféricas de alto rango dinámico iluminen la escena de manera global y difusa.
+
+\subsection{El Modelo de Material Estándar}
+La clase \texttt{StandardMaterial3D} en Godot encapsula los parámetros del modelo PBR. La ecuación fundamental que determina el color final $I$ de un fragmento es una combinación lineal ponderada por la "metalicidad" del material:
+
+\begin{equation}
+    I = e + a + (1 - m)(b \cdot d + s \cdot p_{\alpha}) + m \cdot b \cdot p_{\alpha}
+\end{equation}
+
+Donde:
+\begin{itemize}
+    \item $e$: Emisión (luz propia del material).
+    \item $a$: Luz ambiental reflejada (proveniente del mapa de entorno).
+    \item $m$: Factor \textit{metallic} (0.0 a 1.0). Distingue entre dieléctricos y conductores.
+    \item $b$: Color base (\textit{Albedo}), modulado por texturas.
+    \item $d$: Reflectividad difusa (Lambertiana o Burley).
+    \item $s$: Factor especular para no metales (\textit{metallic\_specular}).
+    \item $p_{\alpha}$: Lóbulo especular (BRDF), dependiente de la rugosidad $\alpha$ (\textit{roughness}).
+\end{itemize}
+
+\subsubsection{Análisis de los extremos del modelo}
+\begin{itemize}
+    \item \textbf{Dieléctricos ($m=0$):} El término predominante es $(b \cdot d + s \cdot p_{\alpha})$. El color base afecta a la componente difusa, pero el brillo especular es blanco (o del color de la luz), gobernado por el índice de fresnel implícito en $s$.
+    \item \textbf{Metales ($m=1$):} La ecuación se simplifica a $b \cdot p_{\alpha}$. No existe componente difusa. Toda la luz reflejada es especular y está tintada por el color base del material (el albedo define el color del reflejo metálico).
+\end{itemize}
+
+\subsection{Transparencia y Renderizado}
+Godot gestiona la transparencia mediante la propiedad \texttt{transparency} del material o el canal Alfa del color base. A diferencia de la óptica física real, en el modo de renderizado estándar (rasterización), los objetos transparentes no suelen generar refracción compleja ni proyectar sombras parciales, a menos que se utilicen técnicas avanzadas de ray-tracing o shaders específicos de refracción en espacio de pantalla.
+

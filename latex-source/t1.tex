@@ -1,0 +1,70 @@
+\chapter{Introducción a los Fundamentos de la Informática Gráfica}
+
+\section{Definición y Alcance de la Disciplina}
+
+La Informática Gráfica no debe reducirse conceptualmente a la mera generación de imágenes digitales. Desde una perspectiva académica y rigurosa, se define como la rama de la ingeniería informática dedicada al procesamiento integral de la información geométrica y visual. Esta disciplina se sustenta sobre cuatro pilares fundamentales que estructuran el conocimiento impartido en la asignatura:
+
+\begin{itemize}
+    \item \textbf{Modelado Geométrico:} Comprende las técnicas matemáticas y algorítmicas necesarias para representar entidades, tanto reales como abstractas, mediante estructuras de datos computables (vértices, aristas, polígonos y superficies).
+    \item \textbf{Visualización (Rendering):} Abarca los procesos de síntesis de imagen a partir de los modelos geométricos definidos previamente. Es la etapa de conversión de datos vectoriales tridimensionales en mapas de bits bidimensionales.
+    \item \textbf{Interacción:} Estudio de los mecanismos que permiten al usuario modificar los modelos o los parámetros de visualización en tiempo real, cerrando el ciclo de realimentación hombre-máquina.
+    \item \textbf{Computación Geométrica:} Conjunto de operaciones matemáticas (álgebra lineal, cálculo diferencial) aplicadas sobre los modelos para realizar simulaciones, deformaciones o análisis espacial.
+\end{itemize}
+
+\section{Paradigmas de Visualización y Algoritmia}
+
+En el desarrollo de aplicaciones gráficas interactivas, la gestión del tiempo de cómputo es crítica. El sistema opera bajo un bucle continuo, conocido como \textit{Game Loop}, donde se procesan eventos, se actualiza el estado lógico de la simulación y se renderiza el fotograma resultante.
+
+Existen dos filosofías algorítmicas predominantes para resolver el problema de la visibilidad y el coloreado:
+
+\subsection{Rasterización}
+Es el estándar predominante en la industria de los gráficos en tiempo real debido a su eficiencia. Su lógica se centra en la proyección de primitivas geométricas sobre el plano de imagen.
+\begin{equation}
+    \text{Complejidad} \approx O(n)
+\end{equation}
+Donde $n$ es el número de primitivas geométricas. Este método prioriza la velocidad, iterando sobre la geometría para determinar qué píxeles son cubiertos por cada triángulo.
+
+\subsection{Trazado de Rayos (Ray Tracing)}
+Históricamente reservado para la generación de imágenes \textit{offline} (cine, arquitectura) debido a su alto coste computacional, aunque recientemente viable en tiempo real mediante hardware especializado (RTX).
+\begin{equation}
+    \text{Complejidad} \approx O(p \cdot \log n)
+\end{equation}
+Donde $p$ es el número de píxeles. Este algoritmo simula el comportamiento físico de la luz trazando la trayectoria inversa de los fotones desde la cámara hacia la escena, permitiendo efectos realistas como reflexiones, refracciones y sombras suaves de manera natural.
+
+\section{Arquitectura del Cauce Gráfico (Graphics Pipeline)}
+
+El cauce gráfico representa la arquitectura de flujo de datos dentro de la Unidad de Procesamiento Gráfico (GPU). Se divide en etapas secuenciales, algunas de las cuales son programables mediante \textit{shaders}:
+
+\begin{enumerate}
+    \item \textbf{Procesamiento de Vértices (Vertex Shader):} Etapa programable donde se transforman los vértices desde el espacio local del objeto hasta el espacio de pantalla proyectado.
+    \item \textbf{Ensamblado de Primitivas y Rasterización:} Etapa de hardware fijo donde los vértices transformados se agrupan en geometrías (triángulos) y se discretizan en fragmentos (candidatos a píxeles).
+    \item \textbf{Procesamiento de Fragmentos (Fragment Shader):} Etapa programable crítica donde se determina el color final de cada píxel, aplicando cálculos de iluminación, texturizado y sombras.
+    \item \textbf{Operaciones de Raster (Framebuffer):} Etapa final donde se realizan pruebas de profundidad (\textit{Z-Buffer}) y mezcla de colores (\textit{Blending}) antes de escribir en la memoria de vídeo.
+\end{enumerate}
+
+\section{Ecosistema Tecnológico: APIs y Motores}
+
+Para interactuar con el hardware gráfico, la ingeniería de software moderna utiliza capas de abstracción jerárquicas.
+
+\subsection{Interfaces de Programación de Aplicaciones (APIs)}
+Constituyen el nivel bajo de abstracción, permitiendo la comunicación directa con el controlador de la GPU.
+\begin{itemize}
+    \item \textbf{OpenGL:} API histórica, caracterizada por su alta compatibilidad y relativa sencillez, aunque con menor control sobre la gestión de memoria.
+    \item \textbf{Vulkan / DirectX 12 / Metal:} APIs modernas de bajo nivel (\textit{low-level}), diseñadas para reducir la sobrecarga de la CPU y permitir paralelismo masivo, a costa de una complejidad de desarrollo significativamente mayor.
+\end{itemize}
+
+\subsection{Motores Gráficos (Game Engines)}
+Representan un nivel alto de abstracción, construidos sobre las APIs mencionadas. Proveen entornos integrados de desarrollo (IDE) con herramientas para física, audio, inteligencia artificial y gestión de escenas.
+\begin{itemize}
+    \item \textbf{Godot Engine:} Herramienta vehicular seleccionada para el curso. Es un motor de código abierto (\textit{Open Source}) bajo licencia MIT, ligero y versátil. Utiliza una arquitectura basada en nodos y árboles de escena, y su lenguaje de scripting principal es GDScript, sintácticamente similar a Python pero optimizado para la arquitectura del motor.
+\end{itemize}
+
+\section{Metodología de Evaluación}
+
+La asignatura establece un criterio de evaluación mixto y riguroso para garantizar la adquisición de competencias teóricas y prácticas. La calificación final se compone de dos bloques equiponderados:
+
+\begin{equation}
+    Nota_{Final} = (0.5 \cdot Nota_{Teoría}) + (0.5 \cdot Nota_{Prácticas})
+\end{equation}
+
+Es condición indispensable obtener una calificación mínima del $40\%$ (4 puntos sobre 10) en cada una de las partes de forma independiente para poder realizar el promedio. La parte teórica se evalúa mediante examen escrito, mientras que la práctica requiere la defensa de implementaciones en el laboratorio utilizando el motor Godot.

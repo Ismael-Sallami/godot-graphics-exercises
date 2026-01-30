@@ -1,0 +1,131 @@
+\chapter{Modelos de Objetos y Representación mediante Mallas Indexadas}
+
+\section{Introducción a los Modelos Geométricos}
+
+En el ámbito de la Informática Gráfica, la representación digital de entes espaciales constituye el pilar fundamental sobre el que se sustentan los procesos de visualización y simulación. Un \textbf{modelo geométrico} se define formalmente como una abstracción matemática diseñada para representar un objeto que reside en un espacio afín, típicamente de dos () o tres dimensiones ().
+
+La condición \textit{sine qua non} para cualquier modelo computacional es que debe permitir la visualización del objeto representado mediante algoritmos. Históricamente y en la práctica actual, distinguimos varias categorías principales de representación:
+
+\begin{itemize}
+\item \textbf{Modelos de Fronteras (B-Rep):} Representan la superficie que delimita al objeto, separando el interior del exterior. La implementación más ubicua de este paradigma son las mallas de polígonos, específicamente las mallas de triángulos.
+\item \textbf{Enumeración Espacial (Vóxeles):} Aproximación volumétrica donde el espacio se discretiza en celdas regulares (vóxeles), clasificando cada una como interior o exterior al objeto. Es análogo al píxel en  pero extendido a .
+\item \textbf{Modelos Implícitos y Procedurales:} Se basan en definiciones matemáticas continuas, como las Funciones de Distancia con Signo (\textit{Signed Distance Functions} o SDF).
+\end{itemize}
+
+\subsection{Formalización Matemática}
+Desde una perspectiva teórica rigurosa, un objeto se modela como un subconjunto de puntos  en un espacio euclídeo . Por ejemplo, una esfera de radio  y centro  se define como:
+\begin{equation}
+S = { \mathbf{p} \in E \mid | \mathbf{p} - \mathbf{c} | \le r }
+\end{equation}
+Estos conjuntos deben ser cerrados (contienen a su frontera ), acotados (extensión finita) y poseer una superficie diferenciable. Dado que la memoria de un computador es finita y discreta, es imposible representar el conjunto infinito de puntos de  de manera exacta en todos los casos, lo que obliga a recurrir a aproximaciones computacionales (mallas o vóxeles) o representaciones algorítmicas.
+
+\subsection{Modelos Algorítmicos: SDFs}
+Los modelos procedurales no almacenan geometría explícita, sino que codifican el objeto mediante una función evaluable en cualquier punto del espacio . Distinguimos dos variantes:
+\begin{enumerate}
+\item \textbf{Función de Pertenencia:} Devuelve un valor booleano indicando si  está dentro del objeto.
+\item \textbf{Función de Distancia con Signo (SDF):} Devuelve la distancia euclídea mínima desde  hasta la superficie del objeto. El signo indica si el punto es interior (negativo) o exterior (positivo).
+\end{enumerate}
+Las SDFs son cruciales en la visualización moderna (especialmente en \textit{Ray Marching} y redes neuronales profundas para geometría) debido a su capacidad para representar topologías complejas y fractales con precisión arbitraria.
+
+\section{Modelos de Fronteras: Mallas de Polígonos}
+
+Una malla de polígonos (\textit{Polygon Mesh}) es una colección de vértices, aristas y caras que define la forma de un objeto poliédrico. Este modelo aproxima superficies curvas mediante un conjunto finito de facetas planas.
+
+\subsection{Elementos Topológicos y Geométricos}
+Es imperativo distinguir entre la \textbf{geometría} (la posición espacial de los puntos) y la \textbf{topología} (la conectividad entre dichos puntos).
+
+\begin{itemize}
+\item \textbf{Vértice:} Entidad fundamental compuesta por una posición en el espacio afín y, crucialmente, un índice identificador único entero ( a ). El índice permite abstraer la conectividad de la posición geométrica.
+\item \textbf{Cara:} Superficie plana delimitada por un polígono. Se define topológicamente como una secuencia ordenada de índices de vértices.
+\item \textbf{Arista:} Segmento de recta que conecta dos vértices. Se define por un par de índices de vértices.
+\end{itemize}
+
+\subsection{Propiedades de las 2-Variedades (2-Manifolds)}
+Para garantizar la consistencia en algoritmos de renderizado y simulación, las mallas suelen restringirse a ser \textbf{2-variedades}. Esto implica que la vecindad local de cualquier punto de la superficie es homeomorfa a un disco abierto en . Las condiciones discretas para que una malla sea una 2-variedad incluyen:
+\begin{enumerate}
+\item Cada arista es compartida por, como máximo, dos caras.
+\item Las caras incidentes a un vértice forman un "abanico" continuo (o un ciclo completo si es un punto interior).
+\item No existen vértices aislados ni singularidades topológicas (como dos conos unidos únicamente por el ápice).
+\end{enumerate}
+
+Las mallas pueden ser \textbf{cerradas} (sin fronteras, encierran un volumen) o \textbf{abiertas} (poseen bordes). Una malla es cerrada si y solo si todas sus aristas son adyacentes a exactamente dos caras.
+
+\subsection{Orientación y Cribado (Culling)}
+La orientación de una cara se determina por el orden de recorrido de sus vértices. Esto define un vector normal a la superficie. En visualización, es fundamental la coherencia en la orientación (típicamente antihoraria o \textit{Counter-Clockwise} para la cara frontal). El \textbf{cribado de caras traseras} (\textit{back-face culling}) es una técnica de optimización que descarta el renderizado de caras cuya normal apunta en dirección opuesta al observador, asumiendo que son ocultadas por la parte delantera del objeto cerrado.
+
+\section{Atributos de la Malla}
+
+Más allá de la posición espacial, los vértices y caras portan información adicional necesaria para el modelo de iluminación y texturizado:
+
+\begin{itemize}
+\item \textbf{Normales:} Vectores unitarios perpendiculares a la superficie.
+\begin{itemize}
+\item \textit{Normal de la cara:} Calculada mediante el producto vectorial de dos aristas no colineales del polígono. Es constante para toda la cara (sombreado plano).
+\item \textit{Normal del vértice:} Promedio ponderado de las normales de las caras adyacentes. Fundamental para el sombreado de Gouraud o Phong, permitiendo simular curvatura en geometría facetada.
+\end{itemize}
+\item \textbf{Coordenadas de Textura:} Mapean puntos de la superficie 3D a un espacio 2D de imagen (espacio UV).
+\item \textbf{Colores:} Valores RGB asignados a vértices para interpolación.
+\end{itemize}
+
+Es importante notar que las discontinuidades en la superficie (bordes duros) requieren la duplicación de vértices en la misma posición espacial pero con diferentes normales, rompiendo la continuidad topológica para preservar la discontinuidad geométrica visual.
+
+\section{Estructuras de Datos y Representación en Memoria}
+
+La eficiencia del procesamiento gráfico depende críticamente de cómo se organizan estos datos en memoria. Analizamos las estructuras principales:
+
+\subsection{Triángulos Aislados (Triangle List)}
+Es la representación más simple. Se almacena una lista lineal de vértices, donde cada terna consecutiva define un triángulo.
+\begin{equation}
+V = {v_0, v_1, v_2, v_3, v_4, v_5, \dots }
+\end{equation}
+\textbf{Desventaja:} Alta redundancia. Un vértice compartido por  triángulos se almacena y procesa  veces. No codifica topología explícita.
+
+\subsection{Tiras de Triángulos (Triangle Strips)}
+Estructura optimizada donde cada nuevo vértice, junto con los dos anteriores, define un nuevo triángulo.
+\begin{equation}
+\text{Triángulo } i = {v_i, v_{i+1}, v_{i+2}}
+\end{equation}
+Reduce la redundancia geométrica, pero impone restricciones en la construcción de la malla y no elimina completamente la duplicación.
+
+\subsection{Mallas Indexadas (Indexed Meshes)}
+Es el estándar \textit{de facto} en la industria. Se compone de dos estructuras separadas:
+\begin{enumerate}
+\item \textbf{Tabla de Vértices:} Array conteniendo las coordenadas y atributos de cada vértice único.
+\item \textbf{Tabla de Índices (o Caras):} Array de enteros que referencian a la tabla de vértices.
+\end{enumerate}
+Esta separación desacopla la topología de la geometría.
+\begin{itemize}
+\item \textbf{Eficiencia:} Los vértices se almacenan una sola vez (ahorro de memoria).
+\item \textbf{Cómputo:} La GPU puede cachear los vértices transformados, evitando recálculos.
+\item \textbf{Topología:} La conectividad es explícita a través de los índices compartidos.
+\end{itemize}
+
+\subsection{Aristas Aladas (Winged-Edge)}
+Para operaciones que requieren un recorrido eficiente de la topología (como subdivisión o simplificación de mallas), las mallas indexadas son insuficientes (consultas de adyacencia costosas). La estructura de aristas aladas almacena explícitamente relaciones de vecindad en una tabla de aristas.
+Cada entrada de arista contiene:
+\begin{itemize}
+\item Índices de los vértices extremos (inicial y final).
+\item Índices de las caras adyacentes (izquierda y derecha).
+\item Índices de las aristas predecesoras y sucesoras en el ciclo de cada cara.
+\end{itemize}
+Esto permite consultas de adyacencia en tiempo constante , a costa de un mayor consumo de memoria y complejidad de mantenimiento.
+
+\section{Formatos de Archivo}
+
+La persistencia de estos modelos se realiza mediante formatos estandarizados:
+\begin{itemize}
+\item \textbf{PLY (Polygon File Format):} Flexible, puede ser ASCII o binario. Estructura simple basada en listas de elementos (vértices, caras).
+\item \textbf{OBJ (Wavefront):} Formato de texto ampliamente soportado. Permite índices independientes para posición, normales y texturas (), lo cual optimiza el almacenamiento pero requiere procesamiento para convertirlo a una estructura de malla indexada estricta (donde un índice apunta a un conjunto único de atributos).
+\item \textbf{glTF/GLB:} Estándar moderno de Khronos Group. Diseñado para la transmisión eficiente (JSON para jerarquía + Binario para datos), soportando materiales PBR y escenas complejas.
+\end{itemize}
+
+\section{Análisis de Complejidad y Eficiencia}
+
+El análisis asintótico del almacenamiento revela diferencias significativas. Para una malla cerrada triangular con topología de esfera, si  es el número de vértices, el número de caras es  y el de aristas  (consecuencia de la característica de Euler).
+
+\begin{itemize}
+\item \textbf{Mallas Indexadas:} El coste de memoria es proporcional a . Dado que los índices son enteros (menor tamaño que vectores flotantes), esta es una compresión significativa respecto a los triángulos aislados.
+\item \textbf{Triángulos Aislados:} El coste es . Al ser  grande, la redundancia de datos geométricos es masiva (factor de  comparado con vértices únicos).
+\end{itemize}
+
+En conclusión, la elección de la estructura de datos (Malla Indexada vs. Tiras vs. Aristas Aladas) representa un compromiso clásico en ingeniería entre eficiencia espacial, velocidad de renderizado y capacidad de manipulación topológica.

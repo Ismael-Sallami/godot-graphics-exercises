@@ -1,0 +1,120 @@
+\chapter{Fundamentos Avanzados de Iluminación Computacional y Renderizado}
+
+\section{Introducción a la Radiometría y Percepción Visual}
+
+El estudio de la síntesis de imágenes realistas requiere una comprensión profunda de la física de la luz y su interacción con la materia, así como de la psicofísica de la percepción humana.
+
+\subsection{Naturaleza de la Radiación Electromagnética}
+La luz visible comprende una franja estrecha del espectro electromagnético, específicamente longitudes de onda ($\lambda$) entre aproximadamente 390 nm y 750 nm. Aunque la física cuántica describe la luz mediante una dualidad onda-partícula, en la informática gráfica, y específicamente en la óptica geométrica, adoptamos principalmente el \textbf{modelo de partículas}.
+
+Bajo este modelo, la luz se conceptualiza como un flujo de fotones que viajan en trayectorias rectilíneas. La magnitud fundamental para cuantificar este flujo es la \textbf{Radiancia} ($L$), definida como la densidad de flujo de energía radiante por unidad de tiempo, por unidad de área proyectada y por unidad de ángulo sólido. Matemáticamente, la radiancia en un punto $p$ en la dirección $\vec{v}$ se denota como $L(\lambda, p, \vec{v})$.
+
+\subsection{El Sistema Visual Humano y la Teoría del Color}
+La percepción del color es el resultado de la respuesta espectral de los fotorreceptores en la retina. El sistema visual humano reduce la distribución espectral de potencia continua de la luz entrante a tres valores discretos (tristímulos), correspondientes a la sensibilidad de los conos S, M y L.
+
+Esta reducción dimensional permite modelar el color mediante un espacio vectorial tridimensional. En computación, utilizamos el modelo \textbf{RGB}, donde un color se representa mediante la mezcla aditiva de tres primarios: Rojo, Verde y Azul. Matemáticamente, la percepción de una distribución de radiancia $L$ se aproxima mediante una función lineal $f(L) \approx (r, g, b)$. Es crucial notar que el espacio RGB es dependiente del dispositivo; una misma tupla $(r, g, b)$ puede resultar en estímulos psicofísicos diferentes dependiendo de las características del hardware de visualización (monitor o proyector).
+
+\section{La Ecuación de Renderizado}
+
+El comportamiento global de la luz en una escena se describe formalmente mediante la \textbf{Ecuación de Renderizado} (Kajiya, 1986). Esta ecuación integral expresa la conservación de la energía radiante en equilibrio. La radiancia saliente $L_o$ desde un punto $p$ en la dirección $\vec{v}$ es la suma de la radiancia emitida por el propio punto (si es una fuente de luz) y la radiancia reflejada proveniente de todas las direcciones incidentes sobre el hemisferio $\Omega$:
+
+\begin{equation}
+L_o(p, \vec{v}) = L_{em}(p, \vec{v}) + \int_{\Omega} f_r(p, \vec{v}, \vec{\omega}_{in}) L_{in}(p, \vec{\omega}_{in}) (\vec{n} \cdot \vec{\omega}_{in}) d\vec{\omega}_{in}
+\end{equation}
+
+Donde:
+\begin{itemize}
+    \item $L_{em}$ es la radiancia emitida.
+    \item $L_{in}$ es la radiancia incidente desde la dirección $\vec{\omega}_{in}$.
+    \item $f_r$ es la Función de Distribución de Reflectancia Bidireccional (BRDF).
+    \item $(\vec{n} \cdot \vec{\omega}_{in})$ es el factor de atenuación geométrica (ley del coseno de Lambert).
+\end{itemize}
+
+Esta ecuación integral de Fredholm de segunda especie no tiene solución analítica general, lo que obliga a utilizar métodos numéricos (como Monte Carlo) o modelos simplificados para su resolución.
+
+\section{El Modelo de Iluminación Local de Phong}
+
+Debido a la complejidad computacional de la ecuación de renderizado completa, históricamente se han adoptado modelos empíricos simplificados. El modelo de Phong es el estándar clásico en la rasterización por hardware. Este modelo descompone la interacción de la luz en tres componentes independientes: ambiental, difusa y especular.
+
+\subsection{Suposiciones y Simplificaciones}
+El modelo asume fuentes de luz puntuales, ignora las inter-reflexiones complejas (iluminación global) y trata los materiales como opacos. La radiancia total se calcula como:
+
+\begin{equation}
+L(p, \vec{v}) = \sum_{i=1}^{N} S_i [f_{am} + f_{dl} + f_{sp}]
+\end{equation}
+
+\subsection{Componente Ambiental}
+Aproxima la iluminación indirecta global mediante un término constante, evitando que las zonas en sombra sean completamente negras:
+\begin{equation}
+f_{am} = k_a \cdot C(p)
+\end{equation}
+Donde $k_a$ es el coeficiente ambiental y $C(p)$ el color base del objeto.
+
+\subsection{Componente Difusa (Lambertiana)}
+Modela la reflexión en superficies mate ideales, donde la luz se dispersa uniformemente en todas direcciones. Depende exclusivamente de la posición de la luz respecto a la normal de la superficie $\vec{n}$, no de la posición del observador:
+\begin{equation}
+f_{dl} = k_d \cdot C(p) \cdot \max(0, \vec{n} \cdot \vec{l})
+\end{equation}
+Donde $\vec{l}$ es el vector unitario hacia la fuente de luz.
+
+\subsection{Componente Especular (Phong y Blinn-Phong)}
+Simula los reflejos brillantes característicos de materiales pulidos.
+\begin{itemize}
+    \item \textbf{Modelo original de Phong:} Se basa en el ángulo entre el vector de reflexión perfecta $\vec{r}$ y el vector hacia el observador $\vec{v}$.
+    \begin{equation}
+    f_{ph} = k_s \cdot (\vec{r} \cdot \vec{v})^e
+    \end{equation}
+    Donde $\vec{r} = 2(\vec{n} \cdot \vec{l})\vec{n} - \vec{l}$.
+    
+    \item \textbf{Modelo de Blinn-Phong:} Una optimización computacional y visualmente más robusta que utiliza el vector medio ("halfway vector") $\vec{h}$, definido como la bisectriz entre $\vec{l}$ y $\vec{v}$:
+    \begin{equation}
+    \vec{h} = \frac{\vec{l} + \vec{v}}{||\vec{l} + \vec{v}||}, \quad f_{bp} = k_s \cdot (\vec{n} \cdot \vec{h})^e
+    \end{equation}
+\end{itemize}
+El exponente $e$ controla la "nitidez" del brillo especular (la suavidad de la superficie).
+
+\section{Modelado Realista y la Función BRDF}
+
+Para alcanzar el fotorrealismo, es necesario sustituir las aproximaciones empíricas por modelos basados en la física (Physically Based Rendering - PBR). La pieza central es la BRDF ($f_r$), que cuantifica la relación entre irradiancia incidente y radiancia reflejada.
+
+\subsection{Leyes de Fresnel}
+En la interfaz entre dos medios con diferentes índices de refracción, la luz se divide en un componente reflejado y otro refractado (transmitido). Las ecuaciones de Fresnel dictan esta proporción. Para materiales dieléctricos, la reflectancia especular aumenta drásticamente a medida que el ángulo de incidencia se aproxima a la rasante (90 grados).
+En computación gráfica, a menudo se utiliza la aproximación de Schlick para el término de Fresnel ($F$):
+\begin{equation}
+F(\theta) \approx F_0 + (1 - F_0)(1 - \cos\theta)^5
+\end{equation}
+Donde $F_0$ es la reflectancia en incidencia normal.
+
+\subsection{Teoría de Microfacetas}
+Los modelos modernos (como Cook-Torrance o GGX) asumen que, a nivel microscópico, las superficies rugosas están compuestas por pequeños espejos perfectos (microfacetas) orientados aleatoriamente. La BRDF especular se modela como:
+
+\begin{equation}
+f_{micro}(\vec{l}, \vec{v}) = \frac{D(\vec{h}) G(\vec{l}, \vec{v}, \vec{h}) F(\vec{l}, \vec{h})}{4 (\vec{n} \cdot \vec{l}) (\vec{n} \cdot \vec{v})}
+\end{equation}
+
+Donde:
+\begin{itemize}
+    \item \textbf{D (Distribución de Normales):} Describe la probabilidad estadística de que una microfaceta esté orientada hacia el vector medio $\vec{h}$. La distribución GGX (Trowbridge-Reitz) es el estándar actual por su capacidad para modelar colas especulares largas.
+    \item \textbf{G (Geometría/Enmascaramiento-Sombreado):} Modela la auto-oclusión de las microfacetas (shadowing) y el bloqueo de la luz reflejada (masking).
+    \item \textbf{F (Fresnel):} La reflectancia física de las microfacetas individuales.
+\end{itemize}
+
+\subsection{Rugosidad y Anisotropía}
+El parámetro de rugosidad ($\alpha$) controla la dispersión de la distribución $D$. Si $\alpha_x \neq \alpha_y$, el material es anisotrópico (como el metal cepillado), variando su apariencia al rotar la superficie alrededor de su normal.
+
+\section{Modelos de Fuentes de Luz}
+
+La iluminación de una escena depende críticamente de la tipología de las fuentes emisoras.
+
+\subsection{Fuentes Puntuales y Direccionales}
+\begin{itemize}
+    \item \textbf{Puntual (Point Light):} Emite desde una posición $q$ en todas direcciones. La intensidad decae cuadráticamente con la distancia ($1/r^2$), aunque en motores gráficos se suelen usar funciones de atenuación modificadas para control artístico.
+    \item \textbf{Direccional (Distant Light):} Simula una fuente en el infinito (como el sol). Los rayos son paralelos y no hay atenuación por distancia.
+\end{itemize}
+
+\subsection{Fuentes Avanzadas}
+\begin{itemize}
+    \item \textbf{Spot Light (Foco):} Una fuente puntual restringida a un cono. La intensidad se atenúa angularmente desde el eje central del cono hacia los bordes, a menudo modelado mediante funciones coseno elevadas a una potencia (similar a Phong).
+    \item \textbf{Luces de Área:} Emiten luz desde una superficie geométrica (disco, rectángulo). Son esenciales para generar sombras suaves realistas, aunque su coste computacional es elevado.
+    \item \textbf{Luces Fotométricas:} Utilizan perfiles de intensidad tabulados (como archivos IES) medidos de luminarias reales, permitiendo patrones de emisión complejos y físicamente exactos.
+\end{itemize}

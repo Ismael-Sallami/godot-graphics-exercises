@@ -1,0 +1,92 @@
+\chapter{Transformación de Vértices}
+
+Este capítulo aborda el conjunto de operaciones matemáticas y algorítmicas necesarias para transformar la geometría de una escena tridimensional, definida mediante vértices, en una representación bidimensional adecuada para su visualización en una pantalla. Este proceso es fundamental en el cauce gráfico (\textit{graphics pipeline}) implementado en hardware por las Unidades de Procesamiento Gráfico (GPUs).
+
+\section{Espacios de Coordenadas y Transformaciones}
+
+El proceso de transformación de vértices implica la conversión secuencial de las coordenadas de los vértices a través de diversos espacios o sistemas de referencia. Cada transición entre espacios se realiza mediante una matriz de transformación específica.
+
+\subsection{El Cauce Gráfico y sus Etapas}
+
+El cauce gráfico de rasterización, utilizado por librerías como OpenGL, DirectX y motores como Godot, procesa los vértices para proyectarlos en el plano de visión. Las etapas principales relacionadas con la geometría son:
+\begin{enumerate}
+    \item \textbf{Transformación de Coordenadas:} Cálculo de la posición proyectada de cada vértice en la pantalla.
+    \item \textbf{Recortado (\textit{Clipping}):} Eliminación de la geometría que se encuentra fuera del volumen de visión visible.
+    \item \textbf{Rasterización y Eliminación de Partes Ocultas (EPO):} Determinación de los píxeles cubiertos por las primitivas y resolución de visibilidad (típicamente mediante \textit{Z-buffer}).
+    \item \textbf{Iluminación y Texturización:} Cálculo del color final de cada píxel (\textit{shading}).
+\end{enumerate}
+
+\subsection{Secuencia de Sistemas de Coordenadas}
+
+Se define una secuencia de seis sistemas de coordenadas fundamentales para el procesamiento de vértices:
+\begin{enumerate}
+    \item \textbf{Coordenadas de Objeto (OC - \textit{Object Coordinates}):} Coordenadas locales relativas al sistema de referencia propio de cada objeto o nodo.
+    \item \textbf{Coordenadas de Mundo (WC - \textit{World Coordinates}):} Coordenadas globales relativas a un sistema de referencia único para toda la escena.
+    \item \textbf{Coordenadas de Vista u Ojo (EC - \textit{Eye Coordinates}):} Coordenadas relativas a la cámara virtual. El observador se sitúa en el origen de este sistema.
+    \item \textbf{Coordenadas de Recortado (CC - \textit{Clip Coordinates}):} Coordenadas homogéneas resultantes de la proyección. Los vértices visibles se encuentran dentro de un rango normalizado, aunque la componente $w$ puede ser distinta de 1.
+    \item \textbf{Coordenadas Normalizadas de Dispositivo (NDC - \textit{Normalized Device Coordinates}):} Obtenidas tras la división por la componente $w$ ($x/w, y/w, z/w$). El volumen visible es un cubo centrado en el origen con coordenadas en el rango $[-1, +1]$.
+    \item \textbf{Coordenadas de Dispositivo (DC - \textit{Device Coordinates}):} Coordenadas finales en unidades de píxeles (o fragmentos) sobre la ventana de visualización.
+\end{enumerate}
+
+\subsection{Matrices de Transformación}
+
+La conversión entre estos sistemas se gestiona mediante matrices de $4 \times 4$:
+\begin{itemize}
+    \item \textbf{Matriz de Modelado ($N$):} Transforma de OC a WC.
+    \item \textbf{Matriz de Vista ($V$):} Transforma de WC a EC. La composición de $N$ y $V$ se denomina a menudo matriz \textit{Model-View}.
+    \item \textbf{Matriz de Proyección ($P$):} Transforma de EC a CC.
+    \item \textbf{Matriz de Viewport ($D$):} Transforma de NDC a DC (dependiente de la resolución de salida).
+\end{itemize}
+
+\section{Transformación de Vista}
+
+La transformación de vista reorienta la geometría de la escena para alinearla con el sistema de referencia de la cámara virtual.
+
+\subsection{Definición del Marco de Vista}
+
+El marco de referencia de la cámara, $\mathcal{V}$, se define mediante un sistema cartesiano $\{\hat{x}_{ec}, \hat{y}_{ec}, \hat{z}_{ec}, \dot{o}_{ec}\}$. Este marco se construye habitualmente a partir de tres parámetros:
+\begin{itemize}
+    \item \textbf{Posición del observador ($\dot{o}_{ec}$):} Punto focal de la proyección (PRP).
+    \item \textbf{Punto de atención ($\dot{a}$):} Punto hacia el cual apunta la cámara (\textit{Look-at point}). Define, junto con la posición, el eje óptico o eje $Z$ negativo del marco de cámara.
+    \item \textbf{Vector hacia arriba ($\vec{u}$):} Vector que indica la orientación vertical de la cámara (\textit{View-up vector}, VUP).
+\end{itemize}
+El eje $Z$ del marco ($\hat{z}_{ec}$) se alinea con la dirección opuesta a la visión (vector normal $\vec{n} = \dot{o}_{ec} - \dot{a}$). El eje $X$ ($\hat{x}_{ec}$) se obtiene mediante el producto vectorial normalizado de $\vec{u}$ y $\vec{n}$. Finalmente, el eje $Y$ ($\hat{y}_{ec}$) se obtiene como el producto vectorial de $\hat{z}_{ec}$ y $\hat{x}_{ec}$.
+
+\subsection{Construcción de la Matriz de Vista}
+
+La matriz de vista $V$ es la inversa de la matriz que sitúa la cámara en el mundo. Dado que el marco es ortonormal, $V$ se puede calcular como la composición de una rotación (la transpuesta de la matriz de rotación de la cámara) y una traslación (que lleva la posición del observador al origen).
+
+\subsection{Implementación en Motores Gráficos}
+
+En entornos como Godot, la clase \texttt{Camera3D} encapsula esta transformación. La propiedad \texttt{transform} del nodo cámara almacena la matriz inversa de vista ($V^{-1}$), que posiciona la cámara en el mundo. Métodos como \texttt{look\_at} permiten configurar intuitivamente la orientación de la cámara hacia un objetivo específico.
+
+\section{Transformación de Proyección}
+
+La transformación de proyección convierte el volumen de visión (\textit{view frustum}) en un volumen canónico de coordenadas normalizadas, preparando la geometría para el recorte y la rasterización.
+
+\subsection{Tipos de Proyección}
+
+Existen dos modelos fundamentales de proyección:
+\begin{itemize}
+    \item \textbf{Proyección Ortográfica (Paralela):} Los proyectores son paralelos entre sí. Mantiene el tamaño de los objetos independientemente de su distancia a la cámara. El volumen de visión es un paralelepípedo rectangular.
+    \item \textbf{Proyección Perspectiva:} Los proyectores convergen en un centro de proyección (el ojo). Los objetos más lejanos aparecen más pequeños (escorzo). El volumen de visión es una pirámide truncada (\textit{frustum}).
+\end{itemize}
+
+\subsection{Parámetros del View-Frustum}
+
+El volumen de visión se define mediante seis planos de recorte: izquierdo ($l$), derecho ($r$), inferior ($b$), superior ($t$), cercano ($n$, \textit{near}) y lejano ($f$, \textit{far}).
+En la proyección perspectiva, estos parámetros determinan la apertura del campo de visión (\textit{Field of View}, FOV) y la relación de aspecto (\textit{aspect ratio}).
+
+\subsection{La Matriz de Proyección Perspectiva}
+
+La matriz de proyección perspectiva $Q$ transforma coordenadas de cámara (EC) a coordenadas de recorte (CC). Una característica distintiva de esta transformación es que modifica la componente homogénea $w$. Para un punto $(x_{ec}, y_{ec}, z_{ec}, 1)$, la coordenada transformada $w_{cc}$ suele tomar el valor $-z_{ec}$. Esto prepara la posterior división por $w$ (división perspectiva) que normaliza las coordenadas y genera el efecto de perspectiva. La matriz $Q$ también reescala los valores de profundidad $Z$ para que se mapeen al rango $[-1, 1]$ (o $[0, 1]$ dependiendo de la API) de manera no lineal, preservando el orden de profundidad para la eliminación de partes ocultas.
+
+\section{Recortado y Transformación de Viewport}
+
+\subsection{Recortado (Clipping) y División Homogénea}
+
+En el espacio de coordenadas de recortado (CC), se identifican y descartan las primitivas (o partes de ellas) que yacen fuera del volumen canónico de visión. Tras el recorte, se realiza la división por la componente $w$ ($x_{ndc} = x_{cc}/w_{cc}$, etc.) para obtener las Coordenadas Normalizadas de Dispositivo (NDC).
+
+\subsection{Transformación de Viewport}
+
+Finalmente, las coordenadas NDC (en el rango $[-1, 1]$) se transforman linealmente a coordenadas de dispositivo (DC), correspondientes a los píxeles de la ventana o \textit{viewport}. Esta transformación implica un escalado y una traslación determinados por las dimensiones ($w, h$) y la posición ($x_l, y_b$) del \textit{viewport} en la ventana. La componente $Z$ también se escala a un rango adecuado para el \textit{buffer} de profundidad (usualmente $[0, 1]$).

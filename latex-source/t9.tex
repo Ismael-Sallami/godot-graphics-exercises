@@ -1,0 +1,91 @@
+\chapter{Fundamentos de la Interacción en Sistemas Gráficos}
+
+\section{Introducción a los Sistemas Gráficos Interactivos}
+
+Un Sistema Gráfico Interactivo (SGI) se define como una arquitectura de software diseñada para mantener un ciclo continuo de retroalimentación con el usuario. A diferencia de los sistemas de procesamiento por lotes, un SGI debe responder a las acciones del operador —típicamente en un intervalo de tiempo imperceptible, del orden de décimas de segundo— y presentar dicha respuesta mediante una visualización gráfica bidimensional o tridimensional.
+
+La arquitectura subyacente de estos sistemas opera mediante un bucle infinito que gestiona una estructura de datos residente en memoria (el modelo). En cada iteración de este ciclo, el sistema espera o detecta una acción externa, captura los datos característicos de dicha acción, modifica el estado interno del modelo en consecuencia y, finalmente, renderiza una nueva imagen que refleja el cambio de estado.
+
+\subsection{Interactividad frente a Tiempo Real}
+Es crucial establecer una distinción taxonómica entre sistemas interactivos y sistemas de tiempo real, aunque a menudo convergen:
+\begin{itemize}
+    \item \textbf{Sistemas Interactivos:} El requisito primordial es una latencia lo suficientemente baja para mantener la percepción de causalidad entre la acción del usuario y la respuesta del sistema.
+    \item \textbf{Sistemas de Tiempo Real:} Se rigen por restricciones deterministas donde la latencia debe ser estrictamente menor o igual a un umbral predefinido. Superar este límite constituye un fallo del sistema. Ejemplos críticos incluyen simuladores de vuelo y aplicaciones de realidad virtual (VR) donde la latencia induce cinetosis.
+\end{itemize}
+
+\subsection{Taxonomía de Dispositivos y Modos de Entrada}
+La interacción se facilita mediante dispositivos físicos (hardware como teclados, ratones, digitalizadores) y dispositivos lógicos (abstracciones software como un puntero en pantalla o un reconocedor de gestos). La gestión de estos dispositivos se clasifica en tres modos operativos fundamentales:
+\begin{enumerate}
+    \item \textbf{Modo de Muestreo (Sampling/Polling):} La aplicación interroga activamente el estado del dispositivo en instantes arbitrarios. Es eficiente en memoria pero puede omitir cambios de estado breves si la frecuencia de muestreo es insuficiente.
+    \item \textbf{Modo de Petición (Request):} El sistema detiene su ejecución esperando explícitamente a que ocurra un evento específico. Garantiza la captura del evento pero bloquea el flujo de ejecución.
+    \item \textbf{Modo de Cola de Eventos (Event Queue):} El sistema operativo o el controlador del dispositivo acumula los cambios de estado en una cola FIFO (First In, First Out). La aplicación procesa esta cola de manera asíncrona, garantizando que no se pierdan eventos sin necesidad de bloqueo ni muestreo constante.
+\end{enumerate}
+
+\section{Arquitectura de Eventos en Godot Engine}
+
+El motor Godot implementa un sistema de gestión de entrada basado primordialmente en eventos, encapsulados en la clase base \texttt{InputEvent}. Esta arquitectura permite desacoplar la lógica del juego de los detalles del hardware.
+
+\subsection{Jerarquía y Tipología de Eventos}
+Los eventos son objetos que transportan información sobre cambios de estado. La jerarquía de clases incluye:
+\begin{itemize}
+    \item \texttt{InputEventFromWindow}: Eventos originados en una ventana o viewport.
+    \item \texttt{InputEventWithModifiers}: Subclase para entradas que pueden alterarse mediante teclas modificadoras (Ctrl, Alt, Shift), abarcando \texttt{InputEventKey} (teclado), \texttt{InputEventMouse} (ratón) e \texttt{InputEventGesture} (pantallas táctiles).
+    \item \texttt{InputEventAction}: Eventos abstractos definidos semánticamente en el mapa de entradas.
+\end{itemize}
+
+\subsection{Flujo de Propagación de Eventos}
+El procesamiento de eventos en el árbol de escena sigue un orden de prioridad estricto. Cuando se instancia un evento, el motor invoca secuencialmente los siguientes métodos virtuales en los nodos activos:
+\begin{enumerate}
+    \item \texttt{\_input()}: Primer método en ejecutarse. Procesa eventos generales.
+    \item \texttt{\_shortcut\_input()}: Específico para atajos de teclado y eventos de control.
+    \item \texttt{\_unhandled\_key\_input()}: Captura eventos de teclado no consumidos previamente.
+    \item \texttt{\_unhandled\_input()}: El último recurso para eventos no procesados, ideal para la lógica del mundo del juego (p.ej., movimiento de cámara) que no debe interferir con la interfaz de usuario (GUI).
+\end{enumerate}
+Un concepto fundamental es el consumo del evento. Un nodo puede marcar un evento como "manejado" mediante \texttt{set\_input\_as\_handled()}, deteniendo su propagación hacia otros nodos en la jerarquía.
+
+\subsection{Abstracción mediante el Mapa de Entradas (Input Map)}
+El \texttt{InputMap} actúa como una capa de indirección que asocia entradas físicas (teclas específicas, botones de joystick) con acciones semánticas (p.ej., "saltar", "mover\_adelante"). Esto permite a los desarrolladores programar lógica basada en acciones (\texttt{InputEventAction}) en lugar de hardware específico, facilitando la reconfiguración de controles por parte del usuario final.
+
+\section{Interfaz de Usuario (GUI) y el Patrón Observador}
+
+La interfaz gráfica de usuario en motores gráficos se distingue de la proyección de la escena 3D/2D. En Godot, se construye mediante nodos derivados de la clase \texttt{Control}, los cuales poseen propiedades de posicionamiento, dimensionamiento y estilo (temas).
+
+\subsection{Elementos de Control y Contenedores}
+La construcción de interfaces complejas se basa en la composición jerárquica de controles.
+\begin{itemize}
+    \item \textbf{Controles Básicos:} Incluyen \texttt{Label} (texto), \texttt{Button} (interacción binaria), \texttt{TextureRect} (imágenes) y rangos numéricos como \texttt{HSlider} o \texttt{SpinBox}.
+    \item \textbf{Contenedores:} Clases derivadas de \texttt{Container} (como \texttt{VBoxContainer}, \texttt{GridContainer}, \texttt{MarginContainer}) que administran automáticamente la disposición espacial de sus hijos, adaptándose a resoluciones dinámicas.
+\end{itemize}
+
+\subsection{Sistema de Señales}
+Godot implementa el patrón de diseño Observador a través del sistema de \textit{Signals}. Una señal es un mecanismo de comunicación desacoplado donde un objeto emisor notifica un cambio de estado sin conocer a sus receptores.
+\begin{itemize}
+    \item \textbf{Definición y Emisión:} Los nodos pueden definir señales personalizadas (keyword \texttt{signal}) y emitirlas ante eventos específicos.
+    \item \textbf{Conexión:} Los objetos interesados se suscriben (conectan) a dichas señales, vinculándolas a funciones de respuesta (\textit{callbacks}). Esto elimina el acoplamiento fuerte entre componentes lógicos y de interfaz, permitiendo, por ejemplo, que una barra de vida se actualice cuando el jugador recibe daño sin que el jugador tenga referencia directa a la barra de vida.
+\end{itemize}
+
+\section{Selección y Picking en Entornos Tridimensionales}
+
+La selección (\textit{picking}) es el proceso de traducir una interacción 2D (clic del ratón en coordenadas de pantalla) en la identificación de un objeto 3D dentro de la escena.
+
+\subsection{Técnicas de Implementación}
+Existen dos paradigmas principales para resolver este problema:
+\begin{enumerate}
+    \item \textbf{Buffer de Selección (Color Picking):} Renderización de la escena en un framebuffer oculto donde cada objeto se dibuja con un color único que codifica su ID. Al hacer clic, se lee el color del píxel correspondiente. Es preciso a nivel de píxel pero requiere una pasada de renderizado adicional.
+    \item \textbf{Lanzamiento de Rayos (Ray Casting):} Cálculo analítico de la intersección entre un rayo proyectado desde la cámara y la geometría de la escena. Es el método estándar en motores modernos debido a su flexibilidad.
+\end{enumerate}
+
+\subsection{Implementación en Godot mediante Ray Casting}
+El proceso de selección en Godot utiliza el sistema de física para realizar consultas espaciales:
+\begin{itemize}
+    \item \textbf{Generación del Rayo:} Se utilizan las funciones de la cámara (\texttt{project\_ray\_origin} y \texttt{project\_ray\_normal}) para desproyectar la posición 2D del ratón hacia un rayo en el espacio 3D.
+    \item \textbf{Colisionadores:} La intersección no se calcula contra la malla visual compleja, sino contra versiones simplificadas invisibles denominadas \textit{colliders} (\texttt{StaticBody3D} con \texttt{CollisionShape3D}). Esto optimiza el coste computacional.
+    \item \textbf{Consulta al Espacio de Estado:} Se emplea el objeto \texttt{PhysicsRayQueryParameters3D} para configurar la consulta y el método \texttt{intersect\_ray()} del \texttt{PhysicsDirectSpaceState} para obtener el primer objeto interceptado.
+\end{itemize}
+
+\subsection{Fundamento Matemático: Intersección Rayo-Triángulo}
+En el nivel más bajo, la selección por rayos implica resolver si una semirrecta $R(t) = O + tD$ intersecta un triángulo definido por los vértices $V_0, V_1, V_2$. Esto requiere verificar dos condiciones:
+\begin{enumerate}
+    \item El rayo debe intersectar el plano que contiene al triángulo.
+    \item El punto de intersección debe encontrarse dentro de los límites del triángulo, lo cual se determina habitualmente mediante el cálculo de coordenadas baricéntricas $(u, v, w)$ tal que $u \geq 0, v \geq 0, u+v \leq 1$.
+\end{enumerate}

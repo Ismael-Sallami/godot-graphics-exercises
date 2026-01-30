@@ -1,0 +1,589 @@
+\chapter{Resolución práctica 2}
+
+En esta sección se abordará el código usado para cumplir con los requisitos de la práctica 2 del curso de Informática Gráfica. Dejando de lado las nociones básicas como importar figuras en diversos formatos vamos a ir tratando el código por bloques, explicando cada uno de ellos.
+
+Vamos a ver el código del fichero que se proporciona de \textit{utilidades.gd}.
+
+\begin{lstlisting}[language=GDScript, caption={Código de utilidades.gd}]
+
+extends Node  # El script extiende la clase Node de Godot
+
+## -----------------------------------------------------------------------------
+## Función que calcula las normales promedio de los vértices de una malla,
+## a partir de la tabla de posiciones de vértices y la tabla de triángulos
+
+@export var normal_length: float = 0.6  # longitud de las líneas de las normales
+@export var normal_color: Color = Color(0.967, 0.83, 0.917, 1.0)  # color de las normales
+
+func calcNormales(verts: PackedVector3Array, tris: PackedInt32Array) -> PackedVector3Array:
+    # Paso 1: comprobar precondiciones
+    assert(verts.size() >= 3, "CalcNormales: la malla debe tener al menos 3 vértices")
+    assert(tris.size() % 3 == 0, "CalcNormales: el número de enteros en 'tris' debe ser múltiplo de 3")
+
+    var nv: int = verts.size()  # número de vértices
+    var nt: int = tris.size() / 3  # número de triángulos
+
+    # Paso 2: inicializa normales a cero
+    var normales := PackedVector3Array([])
+    for i in nv:
+        normales.append(Vector3.ZERO)
+
+    # Paso 3: sumar en cada vértice las normales de sus triángulos adyacentes
+    for it in nt:
+        var t := Vector3i(tris[3 * it + 0], tris[3 * it + 1], tris[3 * it + 2])
+        var a := verts[t[0]]
+        var b := verts[t[1]]
+        var c := verts[t[2]]
+        var normalv := (c - a).cross(b - a).normalized()  # calcula la normal del triángulo
+        for iv in 3:
+            normales[t[iv]] += normalv  # suma la normal al vértice correspondiente
+
+    # Paso 4: normalizar normales
+    for iv in nv:
+        normales[iv] = normales[iv].normalized()
+
+    # Hecho
+    return normales
+
+## -----------------------------------------------------------------------------
+## Función de parametrización de un toroide (donut)
+## u, v: parámetros entre 0 y 1; R: radio mayor; r: radio menor
+
+func ParamDonut(u, v, r, R: float) -> Vector3:
+    var cu := cos(2.0 * PI * u)
+    var su := sin(2.0 * PI * u)
+    var cv := cos(2.0 * PI * v)
+    var sv := sin(2.0 * PI * v)
+    return Vector3((R + r * cv) * cu, (R + r * cv) * su, r * sv)
+
+## -----------------------------------------------------------------------------
+## Genera una tabla de triángulos (índices) con topología toroidal
+## nu: divisiones del primer parámetro; nv: divisiones del segundo parámetro
+
+func GenTriToroidal(nu, nv: int, indices: PackedInt32Array):
+    for i in nu:
+        var isig = (i + 1) % nu
+        for j in nv:
+            var jsig = (j + 1) % nv
+            var i00 = i * nv + j
+            var i01 = i * nv + jsig
+            var i10 = isig * nv + j
+            var i11 = isig * nv + jsig
+
+            indices.append(i00)
+            indices.append(i11)
+            indices.append(i10)
+            indices.append(i00)
+            indices.append(i01)
+            indices.append(i11)
+
+## -----------------------------------------------------------------------------
+## Función que genera un toroide (donut) con 'nu x nv' vértices
+## vertices: tabla de vértices; indices: tabla de índices
+
+func generarDonut(vertices: PackedVector3Array, indices: PackedInt32Array,
+                  nu: int = 128, nv: int = 32, R: float = 1.2, r: float = 0.4):
+    # Genera vértices con la geometría de un donut
+    for i in nu:
+        for j in nv:
+            vertices.append(ParamDonut(float(i) / nu, float(j) / nv, r, R))
+
+    # Genera los triángulos con topología toroidal
+    GenTriToroidal(nu, nv, indices)
+
+## -----------------------------------------------------------------------------
+## Función que crea y devuelve un nodo MeshInstance3D que dibuja las normales
+## de una malla ya existente
+
+func crear_visualizador_de_normales(malla_instancia: MeshInstance3D) -> MeshInstance3D:
+    # Comprobar que el objeto y su malla son válidos
+    if not is_instance_valid(malla_instancia) or not is_instance_valid(malla_instancia.mesh):
+        return null
+
+    var malla_original: Mesh = malla_instancia.mesh
+    var transform_global: Transform3D = malla_instancia.global_transform
+
+    # Usamos MeshDataTool para leer los datos de la malla
+    var mdt = MeshDataTool.new()
+
+    # Creamos la malla para dibujar las líneas
+    var immediate_mesh = ImmediateMesh.new()
+    var material = StandardMaterial3D.new()
+    material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED  # sin sombreado
+    material.albedo_color = normal_color  # color de las normales
+
+    immediate_mesh.surface_begin(Mesh.PRIMITIVE_LINES, material)
+
+    # Recorremos cada superficie de la malla
+    for i in range(malla_original.get_surface_count()):
+        mdt.clear()
+        # Extraemos los datos de la superficie
+        if mdt.create_from_surface(malla_original, i) == OK:
+            # Recorremos cada vértice para dibujar su normal
+            for v_idx in range(mdt.get_vertex_count()):
+                var vertice = mdt.get_vertex(v_idx)
+                var normal = mdt.get_vertex_normal(v_idx)
+                immediate_mesh.surface_add_vertex(vertice)  # inicio de la línea
+                immediate_mesh.surface_add_vertex(vertice + normal * normal_length)  # fin de la línea
+
+    immediate_mesh.surface_end()
+
+    # Creamos el nodo que contendrá las líneas
+    var visualizador = MeshInstance3D.new()
+    visualizador.mesh = immediate_mesh
+    visualizador.name = "VisualizadorNormales_" + malla_instancia.name
+
+    # Colocamos el visualizador en la misma posición y rotación que el objeto original
+    visualizador.global_transform = transform_global
+
+    return visualizador
+
+
+\end{lstlisting}
+
+Cabe destacar que el código que se va a ver en esta sección puede cambiar respecto del que se ofrece en prácticas, ya que se ha ido mejorando y optimizando.
+
+\section{Problema de los cuadrados}
+
+En esta sección se verán los códigos correspondientes al cuadrado de 8 vértices, el cual tiene un problema con las normales y luego se verá el cuadrado de 24 vértices, el cual soluciona el problema de las normales. Se debe mencionar que en el código de \texttt{utilidades.gd} se añade la función \texttt{crear\_visualizador\_de\_normales} que permite visualizar las normales de cualquier malla. Además, el script inicial de la raíz esta modificado para hacer que cuando se pulse la tecla \texttt{N} se muestren o se oculten las normales de todas las mallas que haya en la escena (al pulsar W se muestran las aristas, funcionalidad que se proporciona en clase). Veremos todos estos códigos.
+
+\begin{lstlisting}[language=GDScript, caption={Script de la raíz para alternar visualización de aristas y normales}]
+extends Node3D
+
+# --- Variables de Estado ---
+var dibujar_aristas: bool = false  # Indica si se debe mostrar el modo alambre (aristas)
+var dibujar_normales_activado: bool = false  # Indica si se deben mostrar las normales
+var nodos_visualizadores: Array = []  # Almacena los nodos que visualizan las normales
+
+# --- Funciones de Godot ---
+
+# Se ejecuta al crear el nodo. Activa la generación de wireframes en el motor.
+func _init():
+    RenderingServer.set_debug_generate_wireframes(true)
+
+# Gestiona la entrada de teclado no procesada por la interfaz.
+func _unhandled_key_input(event: InputEvent):
+    # Solo actúa cuando la tecla se suelta para evitar repeticiones.
+    if event is InputEventKey and not event.pressed:
+        
+        # --- Tecla 'W': Alterna el modo alambre ---
+        if event.keycode == KEY_W:
+            dibujar_aristas = not dibujar_aristas  # Cambia el estado del modo alambre
+            if dibujar_aristas:
+                dibujar_normales_activado = false  # Desactiva el modo normales si se activa el alambre
+            _actualizar_modos_de_vista()
+            
+        # --- Tecla 'N': Alterna la visualización de normales ---
+        elif event.keycode == KEY_N:
+            dibujar_normales_activado = not dibujar_normales_activado  # Cambia el estado del modo normales
+            if dibujar_normales_activado:
+                dibujar_aristas = false  # Desactiva el modo alambre si se activan las normales
+            _actualizar_modos_de_vista()
+
+# --- Funciones de Ayuda ---
+
+# Actualiza la vista según el estado de las variables de modo.
+func _actualizar_modos_de_vista():
+    var viewport = get_viewport()
+
+    # 1. Elimina los visualizadores de normales antiguos.
+    for nodo in nodos_visualizadores:
+        if is_instance_valid(nodo):
+            nodo.queue_free()
+    nodos_visualizadores.clear()
+
+    # 2. Activa el modo correspondiente.
+    if dibujar_aristas:
+        viewport.debug_draw = Viewport.DEBUG_DRAW_WIREFRAME  # Activa el modo alambre
+        print("Dibujar en modo aristas: activado")
+    elif dibujar_normales_activado:
+        viewport.debug_draw = Viewport.DEBUG_DRAW_DISABLED  # Desactiva el modo alambre
+        print("Mostrando normales...")
+        _buscar_y_crear_visualizadores(get_tree().root)  # Busca y crea visualizadores de normales
+    else:
+        viewport.debug_draw = Viewport.DEBUG_DRAW_DISABLED  # Desactiva todos los modos de depuración
+        print("Modos de depuración: desactivados")
+
+# Busca recursivamente en la escena todos los nodos de malla visibles y les crea un visualizador de normales.
+func _buscar_y_crear_visualizadores(nodo_actual: Node):
+    # Si el nodo es una malla visible, crea su visualizador de normales.
+    if nodo_actual is MeshInstance3D and nodo_actual.is_visible_in_tree():
+        var visualizador = Utilidades.crear_visualizador_de_normales(nodo_actual)
+        if is_instance_valid(visualizador):
+            get_tree().root.add_child(visualizador)  # Añade el visualizador a la escena
+            nodos_visualizadores.append(visualizador)  # Lo guarda para poder eliminarlo después
+
+    # Llama recursivamente a todos los hijos del nodo actual.
+    for hijo in nodo_actual.get_children():
+        _buscar_y_crear_visualizadores(hijo)
+\end{lstlisting}
+
+El script anterior permite alternar entre la visualización de aristas (modo alambre) y la visualización de normales en todas las mallas de la escena mediante las teclas \texttt{W} y \texttt{N}. Los comentarios explican cada bloque y línea relevante del código, facilitando su comprensión y mantenimiento. Cabe destacar que las partes de añadir iluminación, como añadir un nodo y demás se dan por hecho que el lector ya las sabe hacer, en caso contrario son muy triviales de encontrar en la documentación oficial de Godot, o bien mediante intuición al usar la plataforma.
+
+\begin{lstlisting}[language=GDScript, caption={Cubo de 8 vértices: definición, normales y material}]
+extends MeshInstance3D
+
+func _ready() -> void:
+    
+    # === 1. Definición de Vértices y Triángulos (Cubo de 8 Vértices, solo Y positivas) ===
+    
+    var vertices := PackedVector3Array([
+        # Esquina 0: (-X, +Y0, -Z)
+        Vector3(-0.5, 0.0, -0.5), # 0
+        # Esquina 1: (+X, +Y0, -Z)
+        Vector3( 0.5, 0.0, -0.5), # 1
+        # Esquina 2: (+X, +Y0, +Z)
+        Vector3( 0.5, 0.0,  0.5), # 2
+        # Esquina 3: (-X, +Y0, +Z)
+        Vector3(-0.5, 0.0,  0.5), # 3
+        # Esquina 4: (-X, +Y1, -Z)
+        Vector3(-0.5, 1.0, -0.5), # 4
+        # Esquina 5: (+X, +Y1, -Z)
+        Vector3( 0.5, 1.0, -0.5), # 5
+        # Esquina 6: (+X, +Y1, +Z)
+        Vector3( 0.5, 1.0,  0.5), # 6
+        # Esquina 7: (-X, +Y1, +Z)
+        Vector3(-0.5, 1.0,  0.5)  # 7
+    ])
+    
+    # Cada línea define los índices de los vértices que forman los triángulos de cada cara del cubo
+    var triangulos := PackedInt32Array([
+        # Cara inferior (Y baja)
+        0, 3, 2,  0, 2, 1,
+        # Cara superior (Y alta)
+        4, 5, 6,  4, 6, 7,
+        # Cara frontal (Z-)
+        0, 1, 5,  0, 5, 4,
+        # Cara trasera (Z+)
+        3, 7, 6,  3, 6, 2,
+        # Cara lateral derecha (X+)
+        1, 2, 6,  1, 6, 5,
+        # Cara lateral izquierda (X-)
+        0, 4, 7,  0, 7, 3
+    ])
+    
+    # 2. Cálculo de Normales Suaves
+    # Se calculan las normales promedio para cada vértice usando la función de utilidades
+    var normales := Utilidades.calcNormales(vertices, triangulos)
+            
+    # 3. Creación y asignación de la Malla
+    # Se prepara el array de datos de la malla (vértices, índices y normales)
+    var tablas : Array = []
+    tablas.resize(Mesh.ARRAY_MAX)
+    tablas[Mesh.ARRAY_VERTEX] = vertices
+    tablas[Mesh.ARRAY_INDEX] = triangulos
+    tablas[Mesh.ARRAY_NORMAL] = normales
+    
+    # Se crea la malla y se añade la superficie con los datos anteriores
+    mesh = ArrayMesh.new()
+    mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, tablas)
+    
+    # 4. Material (Sombreado por píxel)
+    # Se crea y configura el material para el cubo
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color(0.4, 0.4, 1.0)  # Color azul claro
+    mat.metallic = 0.3                       # Un poco metálico
+    mat.roughness = 0.2                      # Poco rugoso
+    mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX  # Sombreado por vértice
+    
+    # Se asigna el material a la malla
+    material_override = mat
+\end{lstlisting}
+
+
+\begin{lstlisting}[language=GDScript, caption={Cubo de 24 vértices: definición, normales y material}]
+extends MeshInstance3D
+
+func _ready() -> void:
+    # === 1. Definición de Vértices ===
+    # Se definen 24 vértices, 4 para cada una de las 6 caras del cubo.
+    # Esto permite que cada cara tenga su propia normal, logrando un sombreado plano y correcto.
+    var vertices := PackedVector3Array([
+        # Cara frontal (Z+)
+        Vector3(-0.5,  0.5,  0.5), # 0 - Arriba-Izquierda
+        Vector3( 0.5,  0.5,  0.5), # 1 - Arriba-Derecha
+        Vector3( 0.5, -0.5,  0.5), # 2 - Abajo-Derecha
+        Vector3(-0.5, -0.5,  0.5), # 3 - Abajo-Izquierda
+
+        # Cara trasera (Z-)
+        Vector3( 0.5,  0.5, -0.5), # 4 - Arriba-Derecha
+        Vector3(-0.5,  0.5, -0.5), # 5 - Arriba-Izquierda
+        Vector3(-0.5, -0.5, -0.5), # 6 - Abajo-Izquierda
+        Vector3( 0.5, -0.5, -0.5), # 7 - Abajo-Derecha
+
+        # Cara derecha (X+)
+        Vector3( 0.5,  0.5,  0.5), # 8 - Arriba-Frontal
+        Vector3( 0.5,  0.5, -0.5), # 9 - Arriba-Trasera
+        Vector3( 0.5, -0.5, -0.5), # 10 - Abajo-Trasera
+        Vector3( 0.5, -0.5,  0.5), # 11 - Abajo-Frontal
+
+        # Cara izquierda (X-)
+        Vector3(-0.5,  0.5, -0.5), # 12 - Arriba-Trasera
+        Vector3(-0.5,  0.5,  0.5), # 13 - Arriba-Frontal
+        Vector3(-0.5, -0.5,  0.5), # 14 - Abajo-Frontal
+        Vector3(-0.5, -0.5, -0.5), # 15 - Abajo-Trasera
+
+        # Cara superior (Y+)
+        Vector3(-0.5,  0.5, -0.5), # 16 - Atrás-Izquierda
+        Vector3( 0.5,  0.5, -0.5), # 17 - Atrás-Derecha
+        Vector3( 0.5,  0.5,  0.5), # 18 - Adelante-Derecha
+        Vector3(-0.5,  0.5,  0.5), # 19 - Adelante-Izquierda
+
+        # Cara inferior (Y-)
+        Vector3(-0.5, -0.5,  0.5), # 20 - Adelante-Izquierda
+        Vector3( 0.5, -0.5,  0.5), # 21 - Adelante-Derecha
+        Vector3( 0.5, -0.5, -0.5), # 22 - Atrás-Derecha
+        Vector3(-0.5, -0.5, -0.5)  # 23 - Atrás-Izquierda
+    ])
+
+    # === 2. Definición de Triángulos ===
+    # Se definen los triángulos para cada cara usando los vértices correspondientes.
+    # El orden de los vértices es horario (Clockwise, CW) para que las normales se calculen correctamente.
+    var triangulos := PackedInt32Array([
+        # Cara frontal (Z+)
+        0, 1, 2,  0, 2, 3,
+        # Cara trasera (Z-)
+        4, 5, 6,  4, 6, 7,
+        # Cara derecha (X+)
+        8, 9, 10,  8, 10, 11,
+        # Cara izquierda (X-)
+        12, 13, 14,  12, 14, 15,
+        # Cara superior (Y+)
+        16, 17, 18,  16, 18, 19,
+        # Cara inferior (Y-)
+        20, 21, 22,  20, 22, 23
+    ])
+
+    # === 3. Cálculo de Normales ===
+    # Se calculan las normales para cada vértice usando la función de utilidades.
+    # Al tener vértices duplicados por cara, cada normal será perpendicular a su cara.
+    var normales := Utilidades.calcNormales(vertices, triangulos)
+
+    # === 4. Creación de la Malla ===
+    # Se prepara el array de datos de la malla (vértices, índices y normales).
+    var arrays := []
+    arrays.resize(Mesh.ARRAY_MAX)
+    arrays[Mesh.ARRAY_VERTEX] = vertices
+    arrays[Mesh.ARRAY_INDEX] = triangulos
+    arrays[Mesh.ARRAY_NORMAL] = normales
+
+    var new_mesh := ArrayMesh.new()
+    new_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    mesh = new_mesh
+
+    # === 5. Asignación de Material ===
+    # Se crea y configura el material para el cubo.
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color(0.4, 0.4, 1.0) # Color azul claro
+    mat.metallic = 0.3                      # Un poco metálico
+    mat.roughness = 0.2                     # Poco rugoso
+    mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL # Sombreado por píxel
+
+    material_override = mat
+\end{lstlisting}
+
+Se \textbf{debe de evitar} el típico error de definir los triángulos en sentido antihorario (CounterClockwise, CCW), ya que las normales se calcularán al revés y la iluminación no será correcta.
+
+
+\section{Creación de mallas por revolución de un perfil}
+
+Acorde al guión de prácticas, en esta parte se debe de definir d enuevo un fichero global conc ciertas funciones, como puede ser el cálculo de malla por revolución, entre otros. 
+
+\begin{lstlisting}[language=GDScript, caption={Función para generar mallas por revolución de un perfil}]
+# Archivo: revolucion_utils.gd
+extends Node
+
+const PI = 3.14159265359 # Se usa la constante PI
+
+## Genera una malla indexada por revolución alrededor del eje Y.
+## El perfil se asume en el plano X-Y (Vector2(x, y) -> Vector3(x, y, 0)).
+func generar_malla_revolucion(
+    perfil: PackedVector2Array, 
+    num_copias: int, 
+    vertices: PackedVector3Array, 
+    triangulos: PackedInt32Array
+) -> void:
+
+    var num_puntos_perfil = perfil.size()
+    if num_puntos_perfil < 2 or num_copias < 3:
+        # Se requiere al menos 2 puntos en el perfil y 3 copias para la revolución
+        return
+        
+    var angulo_paso = 2.0 * PI / float(num_copias)
+    
+    # 1. Generación de Vértices
+    for i in range(num_copias):
+        var angulo = float(i) * angulo_paso
+        var cos_a = cos(angulo)
+        var sin_a = sin(angulo)
+        
+        for j in range(num_puntos_perfil):
+            var p2 = perfil[j]
+            var x = p2.x
+            var y = p2.y
+            
+            # Rotación del perfil (x, y, 0) sobre el eje Y
+            var x_rot = x * cos_a
+            var z_rot = x * sin_a # Rotación en el plano XZ
+            
+            # Coordenada Y (altura) permanece igual
+            var nuevo_vertice = Vector3(x_rot, y, z_rot)
+            # Se añaden vértices al array de salida
+            vertices.append(nuevo_vertice) 
+            
+    # 2. Generación de Triángulos (Índices)
+    # Se crean cuadriláteros (quads) y cada uno se divide en dos triángulos.
+    for i in range(num_copias):
+        # El índice 'siguiente_i' conecta el último segmento con el primero (cierre completo)
+        var siguiente_i = (i + 1) % num_copias 
+        
+        for j in range(num_puntos_perfil - 1):
+            # Índices en la capa actual (i) y la siguiente (i+1)
+            var i0 = i * num_puntos_perfil + j           # Vértice A (i, j)
+            var i1 = siguiente_i * num_puntos_perfil + j  # Vértice B (i+1, j)
+            var i2 = siguiente_i * num_puntos_perfil + j + 1 # Vértice C (i+1, j+1)
+            var i3 = i * num_puntos_perfil + j + 1           # Vértice D (i, j+1)
+            
+            # Triángulo 1: (A, B, D) 
+            triangulos.append(i0)
+            triangulos.append(i1)
+            triangulos.append(i3)
+            
+            # Triángulo 2: (B, C, D)
+            triangulos.append(i1)
+            triangulos.append(i2)
+            triangulos.append(i3)
+\end{lstlisting}
+
+Como ejemplos vamos a ver la creación de una esfera y la de una pieza de peón del ajedrez.
+
+\begin{lstlisting}[language=GDScript, caption={Generación de una esfera por revolución de perfil}]
+# Archivo: malla_revolucion.gd
+extends MeshInstance3D
+
+# Parámetros exportados para configurar el modelo desde el editor
+@export var num_copias: int = 64                # Número de copias del perfil (divisiones horizontales)
+@export var radio: float = 1.0                  # Radio de la esfera
+@export var sombreado_por_pixel: bool = true    # Permite alternar el modo de sombreado
+
+## Función que genera el perfil 2D de media circunferencia para la esfera
+func generar_perfil_esfera(segmentos_verticales: int) -> PackedVector2Array:
+    var perfil = PackedVector2Array()
+    var R = radio
+    # Recorre los segmentos verticales para crear puntos desde abajo (PI) hasta arriba (0)
+    for i in range(segmentos_verticales + 1):
+        var angulo = PI * float(i) / float(segmentos_verticales)
+        # Calcula la posición X e Y del punto en el perfil usando funciones trigonométricas
+        var x_coord = R * sin(angulo)   # Componente X del perfil
+        var y_coord = R * cos(angulo)   # Componente Y del perfil
+        perfil.append(Vector2(x_coord, y_coord)) # Añade el punto al perfil
+    return perfil
+
+func _ready() -> void:
+    # Define el número de segmentos verticales para la esfera
+    var segmentos_verticales = 32
+    # Genera el perfil de media circunferencia
+    var perfil_actual = generar_perfil_esfera(segmentos_verticales)
+    
+    # Inicializa los arrays de salida para vértices y triángulos
+    var vertices   := PackedVector3Array([])
+    var triangulos := PackedInt32Array([])
+    
+    # Genera la malla por revolución usando el perfil y el número de copias
+    RevolucionUtils.generar_malla_revolucion(perfil_actual, num_copias, vertices, triangulos)
+    
+    # Calcula las normales promedio para cada vértice
+    var normales := Utilidades.calcNormales(vertices, triangulos)
+    
+    # Prepara el array de datos de la malla (estructura SOA)
+    var tablas : Array = []
+    tablas.resize(Mesh.ARRAY_MAX)
+    tablas[Mesh.ARRAY_VERTEX] = vertices      # Posiciones de los vértices
+    tablas[Mesh.ARRAY_INDEX]  = triangulos    # Índices de los triángulos
+    tablas[Mesh.ARRAY_NORMAL] = normales      # Normales de los vértices
+    
+    # Crea la malla y añade la superficie con los datos anteriores
+    mesh = ArrayMesh.new()
+    mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, tablas)
+    
+    # Crea y configura el material para la esfera
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color(0.2, 0.5, 1.0)   # Color azul claro
+    mat.metallic = 0.3                        # Un poco metálico
+    mat.roughness = 0.2                       # Poco rugoso
+    
+    # Configura el modo de sombreado según el parámetro exportado
+    if sombreado_por_pixel:
+        mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL   # Sombreado por píxel
+    else:
+        mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX # Sombreado por vértice
+    
+    material_override = mat
+\end{lstlisting}
+
+\begin{lstlisting}[language=GDScript, caption={Generación de un peón de ajedrez por revolución de perfil}]
+# Archivo: peon_ajedrez_revolucion.gd
+extends MeshInstance3D
+
+@export var num_copias: int = 64                       # Número de copias del perfil (divisiones horizontales)
+@export var segmentos_verticales_por_tramo: int = 16    # Segmentos por tramo entre puntos clave del perfil
+@export var sombreado_por_pixel: bool = true            # Permite alternar el modo de sombreado
+
+# Constante que define los puntos clave del perfil 2D del peón
+const PUNTOS_PEON_CLAVE: PackedVector2Array = [
+    Vector2(0.0, -1.0), Vector2(0.5, -1.0), Vector2(0.55, -0.8),
+    Vector2(0.2, -0.4), Vector2(0.3, 0.1), Vector2(0.1, 0.5),
+    Vector2(0.35, 0.8), Vector2(0.2, 0.95), Vector2(0.0, 1.0)
+]
+
+# Genera el perfil suavizado interpolando linealmente entre los puntos clave
+func generar_perfil_peon(segmentos: int) -> PackedVector2Array:
+    var perfil = PackedVector2Array()
+    # Para cada tramo entre dos puntos clave, interpola 'segmentos' puntos
+    for i in range(PUNTOS_PEON_CLAVE.size() - 1):
+        var p_inicio = PUNTOS_PEON_CLAVE[i]
+        var p_fin = PUNTOS_PEON_CLAVE[i + 1]
+        for j in range(segmentos):
+            perfil.append(p_inicio.lerp(p_fin, float(j) / float(segmentos)))
+    perfil.append(PUNTOS_PEON_CLAVE[-1]) # Añade el último punto clave
+    return perfil
+
+func _ready() -> void:
+    # Genera el perfil 2D del peón usando la función de interpolación
+    var perfil_actual = generar_perfil_peon(segmentos_verticales_por_tramo)
+    
+    # Inicializa los arrays de salida para vértices y triángulos
+    var vertices := PackedVector3Array([])
+    var triangulos := PackedInt32Array([])
+    
+    # Genera la malla por revolución usando el perfil y el número de copias
+    RevolucionUtils.generar_malla_revolucion(perfil_actual, num_copias, vertices, triangulos)
+    
+    # Calcula las normales promedio para cada vértice
+    var normales := Utilidades.calcNormales(vertices, triangulos)
+    
+    # Prepara el array de datos de la malla (estructura SOA)
+    var tablas: Array = []
+    tablas.resize(Mesh.ARRAY_MAX)
+    tablas[Mesh.ARRAY_VERTEX] = vertices      # Posiciones de los vértices
+    tablas[Mesh.ARRAY_INDEX] = triangulos     # Índices de los triángulos
+    tablas[Mesh.ARRAY_NORMAL] = normales      # Normales de los vértices
+    
+    # Crea la malla y añade la superficie con los datos anteriores
+    mesh = ArrayMesh.new()
+    mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, tablas)
+    
+    # Crea y configura el material para el peón
+    var mat := StandardMaterial3D.new()
+    mat.albedo_color = Color(1.0, 1.0, 0.8)   # Color marfil claro
+    mat.metallic = 0.5                        # Más metálico
+    mat.roughness = 0.4                       # Más rugoso
+    
+    # Configura el modo de sombreado según el parámetro exportado
+    if sombreado_por_pixel:
+        mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL   # Sombreado por píxel
+    else:
+        mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX # Sombreado por vértice
+    
+    material_override = mat
+\end{lstlisting}

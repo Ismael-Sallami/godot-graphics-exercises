@@ -1,0 +1,785 @@
+\chapter{Ejercicios adicionales}    
+
+\section{Práctica 1}
+
+\begin{ejercicio}
+    Pirámide con base en ''L''.
+\end{ejercicio}
+
+\begin{solucion}
+Para resolver este ejercicio, se debe construir una malla 3D indexada que combine una base en forma de ''L'' con una pirámide de 6 caras que converge en un único vértice (ápice).
+
+La malla debe estar compuesta por un total de 7 vértices: 6 para la base en ''L'' y 1 para el ápice. Los vértices de la base se sitúan en el plano $Y=0$, mientras que el ápice se coloca sobre la esquina interior de la ''L'', a una altura determinada.
+
+La base se triangula utilizando el número mínimo de triángulos, en este caso 4, dividiendo la ''L'' en dos rectángulos y cada uno en dos triángulos. Los triángulos de la base se definen mediante los siguientes índices de vértices:
+\begin{itemize}
+    \item $0, 1, 3$
+    \item $1, 2, 3$
+    \item $0, 3, 5$
+    \item $3, 4, 5$
+\end{itemize}
+
+Las caras laterales de la pirámide se forman conectando el ápice con cada uno de los lados de la base, resultando en 6 triángulos adicionales:
+\begin{itemize}
+    \item $6, 0, 1$
+    \item $6, 1, 2$
+    \item $6, 2, 3$
+    \item $6, 3, 4$
+    \item $6, 4, 5$
+    \item $6, 5, 0$
+\end{itemize}
+
+En Godot, se recomienda crear un nodo \texttt{MeshInstance3D} y asignarle un script donde se definan los vértices y los índices de los triángulos. El siguiente ejemplo ilustra cómo implementar la malla en GDScript:
+
+\begin{lstlisting}[language=GDScript]
+extends MeshInstance3D
+
+func _ready():
+    var vertices = PoolVector3Array([
+        Vector3(0, 0, 0), # v0
+        Vector3(2, 0, 0), # v1
+        Vector3(2, 0, 1), # v2
+        Vector3(1, 0, 1), # v3
+        Vector3(1, 0, 2), # v4
+        Vector3(0, 0, 2), # v5
+        Vector3(1, 2, 1)  # v6 (ápice)
+    ])
+
+    var indices = PoolIntArray([
+        0, 1, 3,
+        1, 2, 3,
+        0, 3, 5,
+        3, 4, 5,
+        6, 0, 1,
+        6, 1, 2,
+        6, 2, 3,
+        6, 3, 4,
+        6, 4, 5,
+        6, 5, 0
+    ])
+
+    var arrays = []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[ArrayMesh.ARRAY_VERTEX] = vertices
+    arrays[ArrayMesh.ARRAY_INDEX] = indices
+
+    var mesh = ArrayMesh.new()
+    mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    self.mesh = mesh
+\end{lstlisting}
+
+Al ejecutar la escena, se visualizará la pirámide con base en ''L'' y 6 caras laterales, cumpliendo con los requisitos del ejercicio.
+\end{solucion}
+
+\begin{ejercicio}
+    Polígono regular en el plano $XY$.
+\end{ejercicio}
+
+\begin{solucion}
+Este ejercicio consiste en construir una malla 2D en el plano $XY$ con forma de polígono regular de $n$ lados. El procedimiento es:
+
+\begin{enumerate}
+    \item \textbf{Configuración del nodo:} Crear un nodo \texttt{MeshInstance3D} y asignarle un script, por ejemplo \texttt{PoligonoRegular.gd}.
+    \item \textbf{Definición de parámetros:} El número de lados $n$ es editable desde el inspector.
+    \item \textbf{Generación de vértices:} Se define un vértice central y $n$ vértices exteriores, distribuidos uniformemente en círculo alrededor del centro.
+    \item \textbf{Triangulación:} Se generan $n$ triángulos, cada uno formado por el centro y dos vértices exteriores consecutivos.
+    \item \textbf{Material:} Se asigna un material sin sombreado, usando los colores de los vértices.
+\end{enumerate}
+
+El siguiente código en GDScript implementa la malla:
+
+\begin{lstlisting}[language=GDScript]
+extends MeshInstance3D
+
+@export var n: int = 8
+
+func _ready():
+    if n < 3:
+        n = 3
+        print("El polígono debe tener al menos 3 lados. Usando n=3.")
+    var new_mesh = poligono_regular(n)
+    self.mesh = new_mesh
+    var material = StandardMaterial3D.new()
+    material.vertex_color_use_as_albedo = true
+    material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+    self.material_override = material
+
+func poligono_regular(p_n: int) -> ArrayMesh:
+    var vertices = PackedVector3Array()
+    var colors = PackedColorArray()
+    var indices = PackedInt32Array()
+    var centro = Vector3(0.5, 0.5, 0)
+    vertices.push_back(centro)
+    colors.push_back(Color.WHITE)
+    var radio = 0.5
+    for i in range(p_n):
+        var angulo = (float(i) / float(p_n)) * TAU
+        var x = centro.x + radio * cos(angulo)
+        var y = centro.y + radio * sin(angulo)
+        var z = 0.0
+        vertices.push_back(Vector3(x, y, z))
+        colors.push_back(Color(x, y, z))
+    for i in range(p_n):
+        var idx_centro = 0
+        var idx_v1 = i + 1
+        var idx_v2 = (i + 1) % p_n + 1
+        indices.push_back(idx_centro)
+        indices.push_back(idx_v1)
+        indices.push_back(idx_v2)
+    var arrays = []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[ArrayMesh.ARRAY_VERTEX] = vertices
+    arrays[ArrayMesh.ARRAY_COLOR] = colors
+    arrays[ArrayMesh.ARRAY_INDEX] = indices
+    var mesh = ArrayMesh.new()
+    mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    return mesh
+\end{lstlisting}
+
+\textbf{Explicación:} El vértice central se sitúa en $(0.5, 0.5, 0)$. Los vértices exteriores se distribuyen uniformemente en círculo. Cada triángulo conecta el centro con dos vértices consecutivos, formando así el polígono regular. El material se configura para mostrar los colores de los vértices y sin sombreado.
+\end{solucion}
+
+\begin{ejercicio}
+    Estrella plana en el plano $Z=0$ alternando radios.
+\end{ejercicio}
+
+\begin{solucion}
+Este ejercicio consiste en construir una malla 2D en el plano $Z=0$ con forma de estrella de $n$ puntas, alternando dos radios distintos para generar las puntas y los valles de la estrella.
+
+El procedimiento es el siguiente:
+
+\begin{enumerate}
+    \item \textbf{Configuración del nodo:} Se crea un nodo \texttt{MeshInstance3D} y se le asigna un script, por ejemplo \texttt{EstrellaZ.gd}.
+    \item \textbf{Definición de parámetros:} El número de puntas $n$ es editable. Para una estrella clásica, $n=5$.
+    \item \textbf{Generación de vértices:} Se define un vértice central y $2n$ vértices exteriores, alternando entre el radio de las puntas y el de los valles. El vértice central se sitúa en $(0.5, 0.5, 0)$ y los exteriores se calculan usando ángulos equiespaciados en la circunferencia.
+    \item \textbf{Triangulación:} Se generan $2n$ triángulos, cada uno formado por el centro y dos vértices exteriores consecutivos.
+    \item \textbf{Material:} Se asigna un material sin sombreado y con doble cara, usando los colores de los vértices.
+\end{enumerate}
+
+A continuación se muestra el código en GDScript que implementa la malla:
+
+\begin{lstlisting}[language=GDScript]
+extends MeshInstance3D
+
+@export var n: int = 5
+
+func _ready():
+    if n < 2:
+        n = 2
+        print("La estrella debe tener al menos 2 puntas. Usando n=2.")
+    var new_mesh = ArrayMeshEstrellaZ(n)
+    self.mesh = new_mesh
+    var material = StandardMaterial3D.new()
+    material.vertex_color_use_as_albedo = true
+    material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+    material.cull_mode = StandardMaterial3D.CULL_DISABLED
+    self.material_override = material
+
+func ArrayMeshEstrellaZ(p_n: int) -> ArrayMesh:
+    var vertices = PackedVector3Array()
+    var colors = PackedColorArray()
+    var indices = PackedInt32Array()
+    var centro = Vector3(0.5, 0.5, 0)
+    vertices.push_back(centro)
+    colors.push_back(Color.WHITE)
+    var radio_punta = 0.5
+    var radio_valle = 0.25
+    var num_vertices_externos = 2 * p_n
+    for i in range(num_vertices_externos):
+        var radio_actual = radio_punta if i % 2 == 0 else radio_valle
+        var angulo = (float(i) / float(num_vertices_externos)) * TAU
+        var x = centro.x + radio_actual * cos(angulo)
+        var y = centro.y + radio_actual * sin(angulo)
+        var z = 0.0
+        vertices.push_back(Vector3(x, y, z))
+        colors.push_back(Color(x, y, z))
+    for i in range(num_vertices_externos):
+        var idx_centro = 0
+        var idx_v1 = i + 1
+        var idx_v2 = (i + 1) % num_vertices_externos + 1
+        indices.push_back(idx_centro)
+        indices.push_back(idx_v1)
+        indices.push_back(idx_v2)
+    var arrays = []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[ArrayMesh.ARRAY_VERTEX] = vertices
+    arrays[ArrayMesh.ARRAY_COLOR] = colors
+    arrays[ArrayMesh.ARRAY_INDEX] = indices
+    var mesh = ArrayMesh.new()
+    mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    return mesh
+\end{lstlisting}
+
+\textbf{Explicación:} El vértice central se sitúa en el centro de la figura. Los vértices exteriores alternan entre dos radios para formar las puntas y valles de la estrella. Cada triángulo conecta el centro con dos vértices exteriores consecutivos, formando así la estrella completa. El material se configura para que la malla sea visible por ambas caras y utilice los colores de los vértices.
+\end{solucion}
+
+\section{Práctica 2}
+
+\begin{ejercicio}
+    Casa alargada en el eje $X$ con tejado a dos aguas.
+\end{ejercicio}
+
+\begin{solucion}
+Se trata de construir una casa alargada, formada por un prisma rectangular sin base ni tapa, y un tejado a dos aguas. Se definen 10 vértices: 8 para las esquinas de las paredes y 2 para la arista superior del tejado. Las paredes laterales se forman con 8 triángulos (2 por cada cara), y el tejado con 6 triángulos (2 gabletes y 4 faldones). Los colores de los vértices se asignan según su posición, y se utiliza un material sin sombreado. El siguiente código en GDScript implementa la malla:
+
+\begin{lstlisting}[language=GDScript]
+extends MeshInstance3D
+
+func _ready():
+    var vertices = PackedVector3Array([
+        Vector3(0.0, 0.0, 0.0), # v0
+        Vector3(1.0, 0.0, 0.0), # v1
+        Vector3(1.0, 0.0, 0.5), # v2
+        Vector3(0.0, 0.0, 0.5), # v3
+        Vector3(0.0, 0.5, 0.0), # v4
+        Vector3(1.0, 0.5, 0.0), # v5
+        Vector3(1.0, 0.5, 0.5), # v6
+        Vector3(0.0, 0.5, 0.5), # v7
+        Vector3(0.0, 1.0, 0.25), # v8
+        Vector3(1.0, 1.0, 0.25)  # v9
+    ])
+
+    var colors = PackedColorArray()
+    for v in vertices:
+        colors.push_back(Color(v.x, v.y, v.z))
+
+    var indices = PackedInt32Array([
+        0, 1, 5,   0, 5, 4,
+        2, 3, 7,   2, 7, 6,
+        1, 2, 6,   1, 6, 5,
+        3, 0, 4,   3, 4, 7,
+        4, 7, 8,
+        5, 9, 6,
+        4, 5, 9,   4, 9, 8,
+        7, 6, 9,   7, 9, 8
+    ])
+
+    var arrays = []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[ArrayMesh.ARRAY_VERTEX] = vertices
+    arrays[ArrayMesh.ARRAY_INDEX] = indices
+    arrays[ArrayMesh.ARRAY_COLOR] = colors
+
+    var new_mesh = ArrayMesh.new()
+    new_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    self.mesh = new_mesh
+
+    var material = StandardMaterial3D.new()
+    material.vertex_color_use_as_albedo = true
+    material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+    material.cull_mode = StandardMaterial3D.CULL_DISABLED
+    self.material_override = material
+\end{lstlisting}
+
+La malla resultante representa una casa alargada con tejado a dos aguas, sin base ni tapa, y con colores interpolados según la posición de los vértices.
+\end{solucion}
+
+\begin{ejercicio}
+    Pirámide con base de estrella.
+\end{ejercicio}
+
+\begin{solucion}
+El objetivo es construir una pirámide cuya base es una estrella plana de $n$ puntas (como en el ejercicio anterior), y cuyas caras laterales convergen en un ápice centrado sobre la base. Se definen $2n+2$ vértices: uno central, $2n$ en el borde de la estrella (alternando radios), y uno para el ápice. Se generan $2n$ triángulos para la base y $2n$ triángulos laterales para las caras de la pirámide. El siguiente código en GDScript implementa la malla para $n=5$:
+
+\begin{lstlisting}[language=GDScript]
+extends MeshInstance3D
+
+func _ready():
+    const n: int = 5
+    if n <= 1:
+        push_error("n debe ser mayor que 1")
+        return
+
+    var vertices = PackedVector3Array()
+    var colors = PackedColorArray()
+    var indices = PackedInt32Array()
+
+    var centro = Vector3(0.5, 0.5, 0)
+    vertices.push_back(centro)
+    colors.push_back(Color.WHITE)
+
+    var radio_punta = 0.5
+    var radio_valle = 0.25
+    var num_vertices_externos = 2 * n
+
+    for i in range(num_vertices_externos):
+        var radio_actual = radio_punta if i % 2 == 0 else radio_valle
+        var angulo = (float(i) / float(num_vertices_externos)) * TAU
+        var x = centro.x + radio_actual * cos(angulo)
+        var y = centro.y + radio_actual * sin(angulo)
+        var z = 0.0
+        vertices.push_back(Vector3(x, y, z))
+        colors.push_back(Color(x, y, z))
+
+    vertices.push_back(Vector3(0.5, 0.5, 0.5))
+    colors.push_back(Color.WHITE)
+    var idx_apex = vertices.size() - 1
+
+    for i in range(num_vertices_externos):
+        var idx_centro = 0
+        var idx_v1 = i + 1
+        var idx_v2 = (i + 1) % num_vertices_externos + 1
+        indices.push_back(idx_centro)
+        indices.push_back(idx_v1)
+        indices.push_back(idx_v2)
+
+    for i in range(num_vertices_externos):
+        var idx_v1 = i + 1
+        var idx_v2 = (i + 1) % num_vertices_externos + 1
+        indices.push_back(idx_apex)
+        indices.push_back(idx_v1)
+        indices.push_back(idx_v2)
+
+    var arrays = []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[ArrayMesh.ARRAY_VERTEX] = vertices
+    arrays[ArrayMesh.ARRAY_COLOR] = colors
+    arrays[ArrayMesh.ARRAY_INDEX] = indices
+
+    var new_mesh = ArrayMesh.new()
+    new_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    self.mesh = new_mesh
+
+    var material = StandardMaterial3D.new()
+    material.vertex_color_use_as_albedo = true
+    material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+    material.cull_mode = StandardMaterial3D.CULL_DISABLED
+    self.material_override = material
+\end{lstlisting}
+
+La malla resultante es una pirámide con base de estrella y colores interpolados, cumpliendo con los requisitos de vértices y triángulos.
+\end{solucion}
+
+\begin{ejercicio}
+    Rejilla perpendicular al eje $Y$.
+\end{ejercicio}
+
+\begin{solucion}
+El objetivo es construir una malla indexada que represente una rejilla plana perpendicular al eje $Y$, es decir, situada en el plano $Y=0$ y ocupando el cuadrado $[0,1]\times[0,1]$ en los ejes $X$ y $Z$. La rejilla está formada por $m \times n$ vértices y $(m-1)\times(n-1)$ celdas, cada una compuesta por dos triángulos.
+
+Cada vértice tiene color RGB igual a sus coordenadas $X$, $Y$, $Z$. La malla resultante tiene $m \times n$ vértices y $2(m-1)(n-1)$ triángulos.
+
+A continuación se muestra el código en GDScript para el nodo \texttt{RejillaY}:
+
+\begin{lstlisting}[language=GDScript]
+extends MeshInstance3D
+
+func _ready():
+    var new_mesh = ArrayMeshRejilla(10, 10)
+    self.mesh = new_mesh
+    var material = StandardMaterial3D.new()
+    material.vertex_color_use_as_albedo = true
+    material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+    material.cull_mode = StandardMaterial3D.CULL_DISABLED
+    self.material_override = material
+
+func ArrayMeshRejilla(m: int, n: int) -> ArrayMesh:
+    var vertices = PackedVector3Array()
+    var colors = PackedColorArray()
+    var indices = PackedInt32Array()
+    # Generar vértices y colores
+    for i in range(m):
+        for j in range(n):
+            var x = float(i) / float(m - 1)
+            var y = 0.0
+            var z = float(j) / float(n - 1)
+            vertices.push_back(Vector3(x, y, z))
+            colors.push_back(Color(x, y, z))
+    # Generar índices de triángulos
+    for i in range(m - 1):
+        for j in range(n - 1):
+            var v0 = i * n + j
+            var v1 = (i + 1) * n + j
+            var v2 = i * n + (j + 1)
+            var v3 = (i + 1) * n + (j + 1)
+            # Triángulo 1
+            indices.push_back(v0)
+            indices.push_back(v2)
+            indices.push_back(v3)
+            # Triángulo 2
+            indices.push_back(v0)
+            indices.push_back(v3)
+            indices.push_back(v1)
+    var arrays = []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[ArrayMesh.ARRAY_VERTEX] = vertices
+    arrays[ArrayMesh.ARRAY_COLOR] = colors
+    arrays[ArrayMesh.ARRAY_INDEX] = indices
+    var mesh = ArrayMesh.new()
+    mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    return mesh
+\end{lstlisting}
+
+\textbf{Explicación:} Se generan $m \times n$ vértices en el plano $Y=0$, con coordenadas $X$ y $Z$ equiespaciadas entre $0$ y $1$. Cada celda de la rejilla se triangula en dos triángulos usando los índices de los vértices. El color de cada vértice es igual a sus coordenadas. El material se configura para mostrar los colores de los vértices y sin sombreado.
+\end{solucion}
+
+
+\begin{ejercicio}
+    Torre de planta cuadrada.
+\end{ejercicio}
+
+\begin{solucion} La tarea es construir una torre hueca de planta cuadrada y altura $n$, formada por $n$ secciones apiladas. Cada sección tiene 4 vértices en la base y 4 en la parte superior, resultando en $4(n+1)$ vértices en total. Las caras laterales se forman con triángulos que conectan los vértices de las secciones adyacentes.
+
+\subsection*{Explicación Detallada}
+
+El objetivo es crear una torre hueca apilando $n$ secciones de paredes cuadradas, una encima de la otra. Se generan $n+1$ "anillos" de vértices, cada uno con 4 vértices formando un cuadrado de lado 1, situados en alturas $Y=0,1,\ldots,n$. Así, hay $4(n+1)$ vértices en total.
+
+Para las caras, cada sección conecta dos anillos consecutivos. Cada cara lateral se forma con 2 triángulos, y hay 4 caras por sección, resultando en $8n$ triángulos en total. Los índices se calculan usando aritmética modular para cerrar la figura correctamente.
+
+\subsection*{Código en GDScript (Torre.gd)}
+
+\begin{lstlisting}[language=GDScript]
+extends MeshInstance3D
+
+func _ready():
+    const n: int = 5
+    if n < 1:
+        push_error("n debe ser 1 o mayor")
+        return
+
+    var vertices = PackedVector3Array()
+    var indices = PackedInt32Array()
+
+    # Generar vértices
+    for i in range(n + 1):
+        var y = float(i)
+        vertices.push_back(Vector3(0.0, y, 0.0))
+        vertices.push_back(Vector3(1.0, y, 0.0))
+        vertices.push_back(Vector3(1.0, y, 1.0))
+        vertices.push_back(Vector3(0.0, y, 1.0))
+
+    # Generar triángulos
+    for i in range(n):
+        for j in range(4):
+            var idx0 = i * 4 + j
+            var idx1 = i * 4 + (j + 1) % 4
+            var idx2 = (i + 1) * 4 + j
+            var idx3 = (i + 1) * 4 + (j + 1) % 4
+
+            indices.push_back(idx0)
+            indices.push_back(idx1)
+            indices.push_back(idx3)
+
+            indices.push_back(idx0)
+            indices.push_back(idx3)
+            indices.push_back(idx2)
+
+    var arrays = []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[ArrayMesh.ARRAY_VERTEX] = vertices
+    arrays[ArrayMesh.ARRAY_INDEX] = indices
+
+    var new_mesh = ArrayMesh.new()
+    new_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    self.mesh = new_mesh
+
+    var material = StandardMaterial3D.new()
+    material.albedo = Color.WHITE
+    material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+    self.material_override = material
+\end{lstlisting}
+
+\textbf{Resumen:} Se construye una torre hueca de planta cuadrada y altura $n$, formada por $4(n+1)$ vértices y $8n$ triángulos, con material sin sombreado.
+\end{solucion}
+
+\section{Práctica 3}
+
+\begin{ejercicio}
+    Grafo de escena: estrella y conos (GrafoEstrellaX).
+\end{ejercicio}
+
+\begin{solucion}
+Este ejercicio consiste en construir un grafo de escena jerárquico en Godot, donde el nodo raíz (\texttt{GrafoEstrellaX}) contiene una estrella plana en el plano $XZ$ y $n$ conos, uno en cada punta de la estrella. Los conos comparten malla y material, y se orientan hacia fuera desde el centro. Además, todo el grafo puede rotar sobre el eje $X$ mediante animación.
+
+\textbf{Puntos clave:}
+\begin{itemize}
+    \item La estrella se genera con una función que crea la malla en el plano $XZ$.
+    \item Los conos se generan con revolución de un perfil y se colocan/orientan en las puntas.
+    \item Se usa un único material y malla para todos los conos.
+    \item La animación rota el nodo raíz, haciendo girar todo el conjunto.
+\end{itemize}
+
+\textbf{Código GDScript:}
+
+\begin{lstlisting}[language=GDScript]
+extends Node3D
+
+const VELOCIDAD_GIRO = 2.5 * TAU
+var activar := "activar_giro_grafoEstrellaX"
+var activa := true
+
+func _ready():
+    const n: int = 5
+    if n <= 1:
+        push_error("n debe ser > 1")
+        return
+
+    var star_mesh = ArrayMeshEstrellaZ(n)
+    var star_node = MeshInstance3D.new()
+    star_node.mesh = star_mesh
+    var star_material = StandardMaterial3D.new()
+    star_material.vertex_color_use_as_albedo = true
+    star_material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+    star_material.cull_mode = StandardMaterial3D.CULL_DISABLED
+    star_node.material_override = star_material
+    add_child(star_node)
+
+    var cone_mesh = crear_mesh_cono()
+    var cone_material = StandardMaterial3D.new()
+    cone_material.albedo = Color.WHITE
+    cone_material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+
+    var centro = Vector3.ZERO
+    var radio_punta = 0.5
+    var num_vertices_totales_estrella = 2 * n
+
+    for i in range(n):
+        var angulo_punta = (float(i * 2) / float(num_vertices_totales_estrella)) * TAU
+        var x = centro.x + radio_punta * cos(angulo_punta)
+        var y = 0.0
+        var z = centro.z + radio_punta * sin(angulo_punta)
+        var pos_punta = Vector3(x, y, z)
+        var cone_node = MeshInstance3D.new()
+        cone_node.mesh = cone_mesh
+        cone_node.material_override = cone_material
+        cone_node.position = pos_punta
+        var dir_original = Vector3.UP
+        var dir_deseada = (pos_punta - centro).normalized()
+        var rotation_axis = dir_original.cross(dir_deseada).normalized()
+        var rotation_angle = dir_original.angle_to(dir_deseada)
+        cone_node.rotate(rotation_axis, rotation_angle)
+        add_child(cone_node)
+
+func _process(delta):
+    if Input.is_action_just_pressed(activar):
+        activa = !activa
+    if activa:
+        rotate_x(VELOCIDAD_GIRO * delta)
+
+func crear_mesh_cono() -> ArrayMesh:
+    var perfil_cono = PackedVector2Array([
+        Vector2(0.0, 0.15),
+        Vector2(0.14, 0.0),
+        Vector2(0.0, 0.0)
+    ])
+    var vertices = PackedVector3Array()
+    var triangulos = PackedInt32Array()
+    RevolucionUtils.generar_malla_revolucion(perfil_cono, 16, vertices, triangulos)
+    var normales = Utilidades.calcNormales(vertices, triangulos)
+    var arrays = []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[Mesh.ARRAY_VERTEX] = vertices
+    arrays[Mesh.ARRAY_INDEX] = triangulos
+    arrays[Mesh.ARRAY_NORMAL] = normales
+    var new_mesh = ArrayMesh.new()
+    new_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    return new_mesh
+
+func ArrayMeshEstrellaZ(p_n: int) -> ArrayMesh:
+    var vertices = PackedVector3Array()
+    var colors = PackedColorArray()
+    var indices = PackedInt32Array()
+    var centro = Vector3.ZERO
+    vertices.push_back(centro)
+    colors.push_back(Color.WHITE)
+    var radio_punta = 0.5
+    var radio_valle = 0.25
+    var num_vertices_externos = 2 * p_n
+    for i in range(num_vertices_externos):
+        var radio_actual = radio_punta if i % 2 == 0 else radio_valle
+        var angulo = (float(i) / float(num_vertices_externos)) * TAU
+        var x = centro.x + radio_actual * cos(angulo)
+        var y = 0.0
+        var z = centro.z + radio_actual * sin(angulo)
+        vertices.push_back(Vector3(x, y, z))
+        colors.push_back(Color(x, y, z))
+    for i in range(num_vertices_externos):
+        var idx_centro = 0
+        var idx_v1 = i + 1
+        var idx_v2 = (i + 1) % num_vertices_externos + 1
+        indices.push_back(idx_centro)
+        indices.push_back(idx_v1)
+        indices.push_back(idx_v2)
+    var arrays = []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[Mesh.ARRAY_VERTEX] = vertices
+    arrays[Mesh.ARRAY_COLOR] = colors
+    arrays[Mesh.ARRAY_INDEX] = indices
+    var new_mesh = ArrayMesh.new()
+    new_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    return new_mesh
+\end{lstlisting}
+
+\end{solucion}
+
+\begin{ejercicio}
+    Grafo de escena: cubo central y cubos pequeños (GrafoCubos).
+\end{ejercicio}
+
+\begin{solucion}
+Se pide construir un grafo de escena donde un cubo central grande se forma con 6 rejillas y, en el centro de cada cara, hay un cubo pequeño alargado. Los cubos pequeños rotan alrededor del eje que pasa por su centro y el origen, usando pivotes. Todo el sistema tiene un único grado de libertad de animación.
+
+\textbf{Puntos clave:}
+\begin{itemize}
+    \item El cubo central se construye con 6 mallas de rejilla, cada una orientada y posicionada en una cara.
+    \item Los cubos pequeños se crean una vez y se colocan como hijos de nodos pivote, que se rotan para animar.
+    \item Se usan materiales y mallas compartidos.
+    \item La animación rota los pivotes de los cubos pequeños.
+\end{itemize}
+
+\textbf{Código GDScript:}
+
+\begin{lstlisting}[language=GDScript]
+extends Node3D
+
+var angulo_giro := 0.0
+const VELOCIDAD_GIRO = TAU
+var activar_accion := "activar_giro_cubos"
+var activa := true
+
+var pivot_x_pos: Node3D
+var pivot_x_neg: Node3D
+var pivot_y_pos: Node3D
+var pivot_y_neg: Node3D
+var pivot_z_pos: Node3D
+var pivot_z_neg: Node3D
+
+func _ready():
+    var rejilla_mesh = ArrayMeshRejilla(11, 11)
+    var cubo_mesh = ArrayMeshCubo24()
+    var rejilla_material = StandardMaterial3D.new()
+    rejilla_material.vertex_color_use_as_albedo = true
+    rejilla_material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+    rejilla_material.cull_mode = StandardMaterial3D.CULL_DISABLED
+    var cubo_material = StandardMaterial3D.new()
+    cubo_material.albedo = Color.WHITE
+    cubo_material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+
+    var cubo_central = Node3D.new()
+    add_child(cubo_central)
+    var centro_rejilla = Vector3(-0.5, 0, -0.5)
+    var transforms = [
+        Transform3D(Basis(), Vector3(0, 0.5, 0)) * Transform3D(Basis(), centro_rejilla),
+        Transform3D(Basis.from_euler(Vector3(PI, 0, 0)), Vector3(0, -0.5, 0)) * Transform3D(Basis(), centro_rejilla),
+        Transform3D(Basis.from_euler(Vector3(0, 0, PI/2.0)), Vector3(0.5, 0, 0)) * Transform3D(Basis(), centro_rejilla),
+        Transform3D(Basis.from_euler(Vector3(0, 0, -PI/2.0)), Vector3(-0.5, 0, 0)) * Transform3D(Basis(), centro_rejilla),
+        Transform3D(Basis.from_euler(Vector3(-PI/2.0, 0, 0)), Vector3(0, 0, 0.5)) * Transform3D(Basis(), centro_rejilla),
+        Transform3D(Basis.from_euler(Vector3(PI/2.0, 0, 0)), Vector3(0, 0, -0.5)) * Transform3D(Basis(), centro_rejilla)
+    ]
+    for i in range(6):
+        var cara = MeshInstance3D.new()
+        cara.mesh = rejilla_mesh
+        cara.material_override = rejilla_material
+        cara.transform = transforms[i]
+        cubo_central.add_child(cara)
+
+    var dist_cubo_peq = 0.7
+    var escala_alargada = Vector3(0.2, 0.4, 0.2)
+
+    pivot_y_pos = Node3D.new()
+    add_child(pivot_y_pos)
+    crear_cubo_pequeno(pivot_y_pos, cubo_mesh, cubo_material, Vector3(0, dist_cubo_peq, 0), escala_alargada)
+
+    pivot_y_neg = Node3D.new()
+    add_child(pivot_y_neg)
+    crear_cubo_pequeno(pivot_y_neg, cubo_mesh, cubo_material, Vector3(0, -dist_cubo_peq, 0), escala_alargada)
+
+    pivot_x_pos = Node3D.new()
+    add_child(pivot_x_pos)
+    crear_cubo_pequeno(pivot_x_pos, cubo_mesh, cubo_material, Vector3(dist_cubo_peq, 0, 0), escala_alargada.rotated(Vector3.FORWARD, PI/2.0))
+
+    pivot_x_neg = Node3D.new()
+    add_child(pivot_x_neg)
+    crear_cubo_pequeno(pivot_x_neg, cubo_mesh, cubo_material, Vector3(-dist_cubo_peq, 0, 0), escala_alargada.rotated(Vector3.FORWARD, -PI/2.0))
+
+    pivot_z_pos = Node3D.new()
+    add_child(pivot_z_pos)
+    crear_cubo_pequeno(pivot_z_pos, cubo_mesh, cubo_material, Vector3(0, 0, dist_cubo_peq), escala_alargada.rotated(Vector3.RIGHT, PI/2.0))
+
+    pivot_z_neg = Node3D.new()
+    add_child(pivot_z_neg)
+    crear_cubo_pequeno(pivot_z_neg, cubo_mesh, cubo_material, Vector3(0, 0, -dist_cubo_peq), escala_alargada.rotated(Vector3.RIGHT, -PI/2.0))
+
+func _process(delta):
+    if Input.is_action_just_pressed(activar_accion):
+        activa = !activa
+    if not activa:
+        return
+    angulo_giro += VELOCIDAD_GIRO * delta
+    if pivot_y_pos:
+        pivot_y_pos.rotation.y = angulo_giro
+        pivot_y_neg.rotation.y = angulo_giro
+        pivot_x_pos.rotation.x = angulo_giro
+        pivot_x_neg.rotation.x = angulo_giro
+        pivot_z_pos.rotation.z = angulo_giro
+        pivot_z_neg.rotation.z = angulo_giro
+
+func crear_cubo_pequeno(pivote: Node3D, mesh: ArrayMesh, mat: StandardMaterial3D, pos: Vector3, escala: Vector3):
+    var cubo = MeshInstance3D.new()
+    cubo.mesh = mesh
+    cubo.material_override = mat
+    cubo.position = pos
+    cubo.scale = escala
+    pivote.add_child(cubo)
+
+func ArrayMeshRejilla(m: int, n: int) -> ArrayMesh:
+    var vertices = PackedVector3Array()
+    var colors = PackedColorArray()
+    var indices = PackedInt32Array()
+    var normales = PackedVector3Array()
+    for i in range(m):
+        for j in range(n):
+            var x = float(i) / float(m - 1)
+            var y = 0.0
+            var z = float(j) / float(n - 1)
+            vertices.push_back(Vector3(x, y, z))
+            colors.push_back(Color(x, y, z))
+            normales.push_back(Vector3.UP)
+    for i in range(m - 1):
+        for j in range(n - 1):
+            var v0 = i * n + j
+            var v1 = (i + 1) * n + j
+            var v2 = i * n + (j + 1)
+            var v3 = (i + 1) * n + (j + 1)
+            indices.push_back(v0)
+            indices.push_back(v2)
+            indices.push_back(v3)
+            indices.push_back(v0)
+            indices.push_back(v3)
+            indices.push_back(v1)
+    var arrays = []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[Mesh.ARRAY_VERTEX] = vertices
+    arrays[Mesh.ARRAY_COLOR] = colors
+    arrays[Mesh.ARRAY_INDEX] = indices
+    arrays[Mesh.ARRAY_NORMAL] = normales
+    var mesh = ArrayMesh.new()
+    mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    return mesh
+
+func ArrayMeshCubo24() -> ArrayMesh:
+    var vertices := PackedVector3Array([
+        Vector3(-0.5,  0.5,  0.5), Vector3( 0.5,  0.5,  0.5), Vector3( 0.5, -0.5,  0.5), Vector3(-0.5, -0.5,  0.5),
+        Vector3( 0.5,  0.5, -0.5), Vector3(-0.5,  0.5, -0.5), Vector3(-0.5, -0.5, -0.5), Vector3( 0.5, -0.5, -0.5),
+        Vector3( 0.5,  0.5,  0.5), Vector3( 0.5,  0.5, -0.5), Vector3( 0.5, -0.5, -0.5), Vector3( 0.5, -0.5,  0.5),
+        Vector3(-0.5,  0.5, -0.5), Vector3(-0.5,  0.5,  0.5), Vector3(-0.5, -0.5,  0.5), Vector3(-0.5, -0.5, -0.5),
+        Vector3(-0.5,  0.5, -0.5), Vector3( 0.5,  0.5, -0.5), Vector3( 0.5,  0.5,  0.5), Vector3(-0.5,  0.5,  0.5),
+        Vector3(-0.5, -0.5,  0.5), Vector3( 0.5, -0.5,  0.5), Vector3( 0.5, -0.5, -0.5), Vector3(-0.5, -0.5, -0.5)
+    ])
+    var triangulos := PackedInt32Array([
+        0, 1, 2,  0, 2, 3,    4, 5, 6,  4, 6, 7,
+        8, 9, 10, 8, 10, 11,   12, 13, 14, 12, 14, 15,
+        16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23
+    ])
+    var normales := Utilidades.calcNormales(vertices, triangulos)
+    var arrays := []
+    arrays.resize(ArrayMesh.ARRAY_MAX)
+    arrays[Mesh.ARRAY_VERTEX] = vertices
+    arrays[Mesh.ARRAY_INDEX] = triangulos
+    arrays[Mesh.ARRAY_NORMAL] = normales
+    var new_mesh := ArrayMesh.new()
+    new_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+    return new_mesh
+\end{lstlisting}
+
+\end{solucion}

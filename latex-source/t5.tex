@@ -1,0 +1,126 @@
+\chapter{Modelos Jerárquicos y Grafos de Escena}
+
+\section{Introducción a los Modelos Jerárquicos}
+
+En el ámbito de la Informática Gráfica, la gestión de la complejidad geométrica y espacial es un desafío fundamental. Los modelos jerárquicos constituyen una solución estructural a este problema, definiéndose como estructuras de datos organizadas en forma de grafo que representan las relaciones espaciales y lógicas entre los diversos componentes de una aplicación interactiva o una simulación visual.
+
+Esta aproximación permite descomponer objetos complejos en componentes más simples y reutilizables. Un componente se define como un objeto geométrico básico (2D o 3D), tal como una malla poligonal, o una agrupación lógica de otros componentes. Las ventajas inherentes a este enfoque incluyen:
+
+\begin{itemize}
+    \item \textbf{Abstracción y Modularidad:} Facilita el diseño de sistemas complejos mediante la composición de entidades primitivas.
+    \item \textbf{Reutilización:} Permite instanciar múltiples veces una misma definición geométrica en diferentes contextos espaciales.
+    \item \textbf{Colaboración:} Habilita el desarrollo concurrente, donde distintos ingenieros pueden trabajar en componentes aislados sin interferencias destructivas.
+\end{itemize}
+
+\section{Teoría de Grafos de Escena}
+
+El \textit{Scene Graph} o Grafo de Escena es la implementación concreta del modelo jerárquico. Matemáticamente, se modela como un Grafo Dirigido Acíclico (DAG, por sus siglas en inglés), aunque frecuentemente se simplifica a una estructura de árbol.
+
+\subsection{Tipología de Nodos}
+Los elementos constitutivos del grafo se clasifican en dos categorías principales:
+\begin{enumerate}
+    \item \textbf{Nodos Terminales (Hojas):} Representan los objetos geométricos fundamentales que no se subdividen más, típicamente asociados a mallas poligonales con vértices definidos en un espacio local.
+    \item \textbf{Nodos No Terminales (Intermedios):} Actúan como agrupadores lógicos o contenedores de transformaciones que afectan a sus subgrafos descendientes (nodos hijos).
+\end{enumerate}
+
+Existe una relación jerárquica estricta donde cada nodo, a excepción del nodo raíz, posee al menos un nodo padre. Las aristas del grafo, que conectan padres con hijos, tienen asociadas transformaciones geométricas afines.
+
+\subsection{Instanciación y Transformaciones Afines}
+La renderización de la escena implica el recorrido del grafo. Un objeto instanciado es, en esencia, una réplica de la geometría asociada a un nodo, modificada por una cadena de transformaciones.
+
+Cada nodo $N$ define un \textbf{Marco de Referencia Local} ($\mathcal{N}$). Las coordenadas de los vértices almacenados en dicho nodo son relativas a este marco. Para situar estos vértices en el contexto global de la escena, se debe aplicar una transformación afín $T$. Si denotamos el marco del nodo padre como $\mathcal{P}$, la relación entre ambos marcos se define mediante una matriz de transformación $M_N$ tal que:
+
+\begin{equation}
+    \mathcal{P} M_N = \mathcal{N}
+\end{equation}
+
+La posición final de un vértice en el \textbf{Marco de la Escena} (o Espacio de Mundo) se obtiene mediante la composición de las transformaciones acumuladas a lo largo del camino desde la raíz hasta el nodo en cuestión. Si un nodo $S_k$ es descendiente de una cadena de nodos con transformaciones $T_1, T_2, \dots, T_k$, la transformación global $T_{global}$ aplicada a la geometría de $S_k$ es:
+
+\begin{equation}
+    T_{global} = T_1 \circ T_2 \circ \dots \circ T_k
+\end{equation}
+
+Esto implica que las operaciones se aplican de izquierda a derecha en términos de composición de funciones, o equivalentemente, multiplicando las matrices de transformación en el orden correspondiente descendente.
+
+\section{Arquitectura de Grafos de Escena en Godot Engine}
+
+El motor gráfico Godot implementa estos conceptos teóricos a través de una arquitectura basada en Nodos, Escenas y Árboles de Escena.
+
+\subsection{Estructura Fundamental}
+\begin{itemize}
+    \item \textbf{Proyecto:} Unidad contenedora de todos los recursos y configuraciones.
+    \item \textbf{Escena:} Un árbol de nodos que puede ser guardado en disco (archivos \texttt{.tscn}). Una escena posee siempre un nodo raíz.
+    \item \textbf{Nodo:} La unidad atómica de construcción. Todo nodo debe pertenecer a una escena y poseer un único padre (salvo la raíz).
+    \item \textbf{Árbol de Escena (SceneTree):} La estructura en tiempo de ejecución que contiene la jerarquía completa de nodos activos.
+\end{itemize}
+
+\subsection{Tipos de Nodos y Gestión de Memoria}
+Godot clasifica los nodos según su funcionalidad espacial:
+\begin{itemize}
+    \item \textbf{Node2D (CanvasItem):} Base para objetos bidimensionales.
+    \item \textbf{Node3D:} Base para objetos tridimensionales (anteriormente conocido como Spatial).
+    \item \textbf{Instancia de Escena:} Un mecanismo de composición que permite incluir una escena completa dentro de otra como si fuera un único nodo. Esto es crucial para la instanciación múltiple de objetos complejos.
+\end{itemize}
+
+Desde la perspectiva de la ingeniería de software y la eficiencia computacional, es imperativo evitar la duplicación de datos geométricos pesados. Godot utiliza el patrón de diseño \textit{Flyweight} mediante la clase \texttt{MeshInstance} (2D o 3D). Estos nodos no contienen la geometría en sí, sino una referencia a un recurso de tipo \texttt{Mesh}. Dado que \texttt{Mesh} hereda de \texttt{RefCounted}, el motor gestiona automáticamente la memoria, liberando el recurso solo cuando el contador de referencias desciende a cero.
+
+\section{Matemática de las Transformaciones en Godot}
+
+Cada nodo espacial ($N$) mantiene una propiedad \texttt{transform} que codifica la matriz $M_N$ responsable de mapear las coordenadas locales al espacio del padre.
+
+\subsection{Transformaciones en el Espacio 2D}
+En 2D, la transformación se representa mediante la clase \texttt{Transform2D}, una matriz de $3 \times 2$ (asumiendo coordenadas homogéneas implícitas). Los atributos que componen esta matriz son:
+\begin{itemize}
+    \item \textbf{Position:} Vector de traslación $(t_x, t_y)$.
+    \item \textbf{Rotation:} Escalar $\theta$ (radianes).
+    \item \textbf{Scale:} Vector de escalado $(s_x, s_y)$.
+    \item \textbf{Skew:} Ángulo de distorsión o cizalladura.
+\end{itemize}
+
+El orden de composición de estas operaciones es crítico para la consistencia matemática. En Godot, la matriz resultante equivale a aplicar las operaciones en el siguiente orden (de derecha a izquierda en notación matricial sobre vectores columna):
+\begin{equation}
+    M_{2D} = T_{raslacion} \cdot R_{otacion} \cdot Skew \cdot S_{cale}
+\end{equation}
+
+\subsection{Transformaciones en el Espacio 3D}
+En 3D, se utiliza la clase \texttt{Transform3D} (matriz $4 \times 3$ o $4 \times 4$ conceptualmente). A diferencia del caso 2D, no se incluye el \textit{skew} por defecto, y la rotación es vectorial (ángulos de Euler o Cuaterniones). El orden de composición estándar es:
+\begin{equation}
+    M_{3D} = T_{raslacion} \cdot R_{otacion} \cdot S_{cale}
+\end{equation}
+Las rotaciones se aplican intrínsecamente en el orden Y-X-Z (Euler), aunque esto es configurable.
+
+\subsection{Manipulación Programática de Transformaciones}
+La actualización de la matriz de transformación puede realizarse mediante asignación directa de propiedades o mediante métodos de composición. Es vital distinguir entre:
+\begin{itemize}
+    \item \textbf{Composición por la Izquierda (Global/Padre):} Métodos como \texttt{rotate()} o \texttt{translate()} aplican la transformación respecto al marco de referencia del padre. Matemáticamente: $M'_{N} = M_{operacion} \cdot M_{N}$.
+    \item \textbf{Composición por la Derecha (Local):} Métodos como \texttt{rotate\_object\_local()} aplican la transformación respecto al marco local del objeto. Matemáticamente: $M'_{N} = M_{N} \cdot M_{operacion}$.
+\end{itemize}
+
+\section{Gestión Dinámica del Árbol de Escena}
+
+La ingeniería de aplicaciones interactivas requiere la manipulación del grafo en tiempo de ejecución (runtime). Godot proporciona una API robusta para este fin mediante \textit{GDScript}.
+
+\subsection{Ciclo de Vida de los Nodos}
+\begin{enumerate}
+    \item \textbf{Instanciación:} Se utiliza el método \texttt{.new()} de la clase correspondiente. El nodo se crea en un estado "huérfano".
+    \item \textbf{Vinculación:} Se inserta en el grafo mediante \texttt{add\_child()}. Solo entonces se hace activo y visible en la escena.
+    \item \textbf{Desvinculación:} El método \texttt{remove\_child()} desconecta el nodo del árbol, devolviéndolo al estado huérfano pero manteniéndolo en memoria.
+    \item \textbf{Destrucción:} Para liberar la memoria, se invoca \texttt{queue\_free()}. Este método no elimina el nodo inmediatamente, sino que agenda su destrucción segura al finalizar el procesamiento del \textit{frame} actual, evitando errores de referencia colgante durante la ejecución de la lógica.
+\end{enumerate}
+
+\subsection{Búsqueda y Acceso}
+El acceso a nodos dentro de la jerarquía se realiza mediante rutas relativas o absolutas utilizando \texttt{get\_node("ruta/al/nodo")}. La nomenclatura de los nodos (\texttt{name}) actúa como identificador único entre hermanos dentro del mismo padre.
+
+\section{Diseño de Grafos Parametrizados}
+
+Un concepto avanzado en el modelado jerárquico es la \textbf{parametrización}. Esto implica diseñar el grafo de tal manera que las transformaciones de sus nodos dependan de variables externas (parámetros o grados de libertad), en lugar de valores estáticos.
+
+\subsection{Aplicaciones}
+\begin{itemize}
+    \item \textbf{Animación Procedural:} Vincular parámetros de transformación (rotación, escala) al tiempo ($t$). Por ejemplo, una rotación continua se define como $\theta(t) = \theta_0 + \omega \cdot t$.
+    \item \textbf{Variación de Diseño:} Generar múltiples variantes de un objeto (e.g., un edificio) alterando parámetros como altura o anchura, los cuales propagan cambios de escala a través de la jerarquía.
+    \item \textbf{Interacción:} Permitir que las entradas del usuario modifiquen directamente los parámetros de la matriz de transformación.
+\end{itemize}
+
+\subsection{Implementación Lógica}
+En la práctica, esto se traduce en scripts que sobrescriben el método \texttt{\_process(delta)}. En cada ciclo de renderizado, se recalculan las matrices de transformación basándose en el estado actual de los parámetros y el tiempo delta transcurrido, asegurando una animación suave e independiente de la tasa de fotogramas (frame-rate independent).

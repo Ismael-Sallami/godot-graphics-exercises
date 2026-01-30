@@ -1,0 +1,108 @@
+\chapter{Espacios y Transformaciones Afines}
+
+\section{Espacios Afines y Marcos de Referencia}
+
+La fundamentación matemática de la informática gráfica reside en la comprensión profunda de las estructuras geométricas que permiten modelar el espacio y las entidades que en él habitan. Es imperativo distinguir formalmente entre vectores y puntos, así como establecer las relaciones algebraicas que los gobiernan.
+
+\subsection{Estructuras de Espacio Vectorial y Espacio Afín}
+
+Un \textbf{Espacio Vectorial}  de dimensión  es un conjunto de elementos denominados vectores libres, denotados comúnmente como . Estos entes representan desplazamientos, direcciones o magnitudes físicas carentes de posición absoluta. En  se definen dos operaciones fundamentales:
+\begin{itemize}
+\item \textbf{Suma de vectores:} Dados , existe un único vector . Esta operación es conmutativa, asociativa, posee un elemento neutro () y elemento opuesto.
+\item \textbf{Producto por escalar:} Dado  y , existe , modificando la magnitud y/o sentido del vector original.
+\end{itemize}
+
+Por contraposición, un \textbf{Espacio Afín}  sobre  es un conjunto de elementos denominados puntos, denotados como , que representan posiciones en el espacio. No existe la suma de puntos en sentido estricto, pero se define la operación de suma de punto y vector:
+\begin{equation}
+\forall \dot{p} \in A_n, \forall \vec{v} \in V_n, \exists! \dot{q} \in A_n : \dot{q} = \dot{p} + \vec{v}
+\end{equation}
+De esta definición se deduce la operación de sustracción de puntos, cuyo resultado es un vector: .
+
+Es posible definir rectas en el espacio afín mediante ecuaciones paramétricas. Una recta que pasa por  y posee un vector director  se expresa como el conjunto de puntos , donde . Asimismo, se definen las \textbf{combinaciones afines} de puntos , válidas únicamente si  (interpretado como un punto en la recta que los une) o si  (interpretado como un vector).
+
+\subsection{Marcos Afines y Coordenadas Homogéneas}
+
+Para representar computacionalmente estos elementos abstractos, es necesario establecer un sistema de referencia. Una \textbf{base} de  es un conjunto ordenado de  vectores linealmente independientes . Un \textbf{marco afín} (o sistema de coordenadas)  en  se constituye por una base de  y un punto origen :
+\begin{equation}
+\mathcal{R} = (\vec{e}_0, \vec{e}*1, \dots, \vec{e}*{n-1}, \dot{o})
+\end{equation}
+
+Cualquier punto  o vector  puede expresarse de manera única respecto a  utilizando \textbf{coordenadas homogéneas}, las cuales son tuplas de  componentes .
+\begin{itemize}
+\item Para vectores, : .
+\item Para puntos, : .
+\end{itemize}
+Esta notación unificada es crucial en informática gráfica pues permite tratar transformaciones lineales y traslaciones mediante una única multiplicación matricial.
+
+\subsection{Producto Escalar y Vectorial}
+
+La introducción de nociones métricas (distancia, ángulos) requiere una base especial  formada por versores (vectores unitarios) ortogonales entre sí.
+\begin{itemize}
+\item \textbf{Producto Escalar:} Operación  que resulta en un real. Permite calcular la norma  y el ángulo entre vectores . Dos vectores son ortogonales si su producto escalar es nulo.
+\item \textbf{Producto Vectorial (en 3D):} Operación  que resulta en un vector perpendicular a ambos operandos. Es anticonmutativo y distributivo.
+\end{itemize}
+Un marco se denomina \textbf{cartesiano} si su base es ortonormal (vectores unitarios y perpendiculares) y su orientación es a derechas (determinante positivo de la matriz de cambio de base respecto a ).
+
+\section{Transformaciones Afines y Matrices}
+
+Una transformación geométrica  es una aplicación entre espacios afines. Se denomina \textbf{transformación afín} si conserva las combinaciones afines, lo que implica que mapea líneas rectas en líneas rectas y conserva el paralelismo.
+\begin{equation}
+T(\dot{q}) - T(\dot{p}) = T(\vec{v}) \quad \text{si} \quad \vec{v} = \dot{q} - \dot{p}
+\end{equation}
+Las transformaciones afines son lineales respecto a vectores: . Se clasifican en singulares (no invertibles) y no singulares (biyectivas).
+
+\subsection{Representación Matricial}
+
+Fijado un marco , toda transformación afín  tiene asociada una matriz  de dimensiones . Las columnas de  corresponden a las coordenadas en  de las imágenes de los vectores de la base y del origen:
+\begin{equation}
+M_T = \begin{pmatrix}
+| & | &  & | \\
+T(\vec{e}_0)_{\mathcal{R}} & T(\vec{e}_1)_{\mathcal{R}} & \dots & T(\dot{o})_{\mathcal{R}} \\
+| & | &  & | \\
+0 & 0 & 0 & 1
+\end{pmatrix}
+\end{equation}
+La aplicación de la transformación se realiza mediante el producto matricial , donde  son las coordenadas homogéneas.
+\begin{itemize}
+\item \textbf{Composición:} La aplicación sucesiva de transformaciones  seguida de  se representa mediante la multiplicación de matrices $M*{T_2} M_{T_1}$.
+\item \textbf{Cambio de Coordenadas:} Si un punto tiene coordenadas  en un marco  y se desea expresarlo en un marco , se utiliza la matriz de cambio de base  tal que .
+\end{itemize}
+
+\subsection{Clasificación de Transformaciones}
+
+\begin{itemize}
+\item \textbf{Isométricas:} Conservan las distancias (). La submatriz lineal es ortonormal con determinante . Incluyen traslaciones, rotaciones y reflexiones.
+\item \textbf{Rígidas:} Son isometrías que además conservan la orientación (determinante ). Incluyen traslaciones y rotaciones.
+\end{itemize}
+
+\section{Transformaciones Usuales en Informática Gráfica}
+
+\subsection{Traslaciones}
+Desplazan puntos mediante la suma de un vector . No afectan a los vectores libres. Su matriz en coordenadas homogéneas es la identidad con el vector de traslación en la última columna.
+
+\subsection{Escalados y Reflexiones}
+El escalado multiplica las coordenadas por factores . Si los factores son iguales, es uniforme (conserva ángulos); si no, es no uniforme. Una reflexión es un caso particular de escalado donde alguno de los factores es negativo (comúnmente -1), invirtiendo la orientación. Para reflexiones respecto a planos arbitrarios definidos por una normal , se utilizan matrices de Householder.
+
+\subsection{Cizallas (Shearing)}
+Transformaciones que desplazan una coordenada en función de otra (ej. ). No son rígidas ni conservan ángulos (salvo casos particulares), pero preservan volúmenes. Su matriz es la identidad con elementos fuera de la diagonal principal.
+
+\subsection{Rotaciones}
+Transformaciones rígidas que giran puntos alrededor de un centro (2D) o un eje (3D).
+\begin{itemize}
+\item \textbf{En 2D:} Matriz ortonormal con funciones trigonométricas ().
+\item \textbf{En 3D (Ejes principales):} Matrices similares a la 2D aplicadas sobre los planos perpendiculares a los ejes  o .
+\item \textbf{En 3D (Eje arbitrario):} Se utiliza la fórmula de Rodrigues para rotar alrededor de un vector unitario . Alternativamente, se emplean \textbf{Cuaterniones} (), que ofrecen ventajas computacionales y evitan problemas como el bloqueo de cardán (\textit{gimbal lock}) presente en los ángulos de Euler.
+\end{itemize}
+
+\section{Transformaciones en Godot}
+
+El motor Godot implementa estos conceptos matemáticos mediante clases específicas en su lenguaje GDScript.
+
+\subsection{Estructuras de Datos}
+\begin{itemize}
+\item \textbf{Tuplas:} `Vector2` y `Vector3` almacenan coordenadas reales (precisión simple). Permiten operaciones algebraicas directas (suma, producto escalar `dot`, producto vectorial `cross`).
+\item \textbf{Matrices:} `Transform2D` (matriz , fila implícita ) y `Transform3D` (matriz , fila implícita ). Almacenan la base transformada y el origen.
+\end{itemize}
+
+\subsection{Aplicación en Nodos}
+Los nodos `Node2D` y `Node3D` poseen una propiedad `transform` que almacena la matriz de transformación relativa al padre. Esta propiedad puede modificarse directamente o mediante métodos auxiliares como `translate()`, `rotate()` o `scale()`, los cuales componen la transformación actual con la nueva operación. La correcta manipulación de estas matrices es esencial para el posicionamiento y movimiento de objetos en la escena gráfica.
