@@ -1,0 +1,34 @@
+# Checks every push, so the README badge means something.
+#
+# There is no Godot project to build, so what CI does is: parse every GDScript
+# file, and verify that the generated files still match the LaTeX they come
+# from. The second one is what stops the two from drifting apart.
+#
+# @author Ismael Sallami Moreno
+
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gdscript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install gdtoolkit
+        run: pip install 'gdtoolkit==4.*'
+
+      - name: Parse every script
+        run: make check
+
+      - name: The generated files still match the LaTeX
+        run: make diff-check

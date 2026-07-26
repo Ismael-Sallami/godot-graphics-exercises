@@ -1,0 +1,22 @@
+# Files that do not parse as Godot 4 GDScript, with the reason.
+#
+# tools/check.sh skips these and fails on anything else, so a new file that
+# does not parse is caught. Nothing is skipped without a reason written here.
+#
+# Fixing them would mean rewriting delivered coursework, so they stay as they
+# are and the README lists them.
+
+# Godot 3 syntax: `onready var` and `export var` instead of `@onready` and
+# `@export`. The animation scripts of session 11 were written against Godot 3
+# while the rest of the material targets Godot 4.
+src/sessions/session-11/script-de-interpolacion-hermite.gd
+src/sessions/session-11/script-del-pendulo-oscilante.gd
+src/sessions/session-11/script-del-reloj-analogico.gd
+src/sessions/session-11/script-de-oscilacion-triangular-controlada.gd
+src/sessions/session-11/script-de-trayectoria-balistica-parametrica.gd
+
+# Indentation was lost when the code was pasted into the LaTeX document: the
+# body of _process sits at column 0. GDScript is indentation-sensitive, so the
+# listing is wrong in the PDF too. Guessing the original nesting would be
+# inventing code, so it is left as the document has it.
+src/sessions/session-09/solution.gd

@@ -1,5 +1,4 @@
 extends Node 
-y
 # Transformación identidad auxiliar para facilitar la lectura del código
 var tr_identidad := Transform2D()
 
