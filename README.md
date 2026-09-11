@@ -127,8 +127,9 @@ Sixty-seven files, **2,425 lines** of code:
 | Known failures, each with a reason | 6 |
 
 The write-up itself, with the figures and the derivations, is the PDF published at
-[elblogdeismael.github.io](https://elblogdeismael.github.io/) under Cuarto Curso →
-Informática Gráfica.
+[elblogdeismael.github.io](https://elblogdeismael.github.io/), filed under the fourth-year
+computer graphics course. The blog's menus are in Spanish, so look for `Cuarto Curso` and
+then `Informática Gráfica`.
 
 ## What I learned
 
